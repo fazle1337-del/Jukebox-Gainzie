@@ -77,6 +77,84 @@ db.serialize(() => {
     )`);
 });
 
+// Music scanning function
+async function scanMusicDirectory() {
+    console.log('Scanning music directory for new files...');
+    
+    try {
+        const files = await fs.readdir(MUSIC_PATH);
+        const musicExtensions = ['.mp3', '.wav', '.flac', '.m4a', '.ogg'];
+        
+        for (const file of files) {
+            if (file === '.gitkeep') continue; // Skip placeholder file
+            
+            const ext = path.extname(file).toLowerCase();
+            if (!musicExtensions.includes(ext)) continue;
+            
+            const filePath = path.join(MUSIC_PATH, file);
+            
+            // Check if file already exists in database
+            const existingSong = await new Promise((resolve, reject) => {
+                db.get('SELECT id FROM songs WHERE filename = ?', [file], (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                });
+            });
+            
+            if (existingSong) {
+                console.log(`Skipping existing file: ${file}`);
+                continue;
+            }
+            
+            try {
+                // Get file stats for basic info
+                const stats = await fs.stat(filePath);
+                
+                // Try to extract metadata using ffprobe
+                let title = path.basename(file, ext);
+                let artist = 'Unknown Artist';
+                let duration = 0;
+                
+                try {
+                    const { stdout } = await execAsync(`ffprobe -v quiet -print_format json -show_format "${filePath}"`);
+                    const metadata = JSON.parse(stdout);
+                    
+                    title = metadata.format.tags?.title || metadata.format.tags?.Title || title;
+                    artist = metadata.format.tags?.artist || metadata.format.tags?.Artist || artist;
+                    duration = Math.floor(metadata.format.duration) || 0;
+                } catch (metadataError) {
+                    console.log(`Could not extract metadata for ${file}, using filename`);
+                }
+                
+                // Add to database
+                await new Promise((resolve, reject) => {
+                    db.run('INSERT INTO songs (filename, title, artist, duration, file_path, added_by) VALUES (?, ?, ?, ?, ?, ?)',
+                        [file, title, artist, duration, filePath, null], // null for system-added files
+                        function(err) {
+                            if (err) reject(err);
+                            else {
+                                console.log(`Added: ${title} by ${artist}`);
+                                resolve(this.lastID);
+                            }
+                        }
+                    );
+                });
+                
+            } catch (fileError) {
+                console.error(`Error processing file ${file}:`, fileError.message);
+            }
+        }
+        
+        console.log('Music directory scan completed');
+        
+    } catch (error) {
+        console.error('Error scanning music directory:', error);
+    }
+}
+
+// Scan music directory on startup
+scanMusicDirectory();
+
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -318,6 +396,17 @@ app.post('/api/upload', authenticateToken, upload.single('music'), async (req, r
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ error: 'Failed to process uploaded file' });
+    }
+});
+
+// Manual rescan endpoint
+app.post('/api/rescan', authenticateToken, async (req, res) => {
+    try {
+        await scanMusicDirectory();
+        res.json({ message: 'Music directory rescanned successfully' });
+    } catch (error) {
+        console.error('Rescan error:', error);
+        res.status(500).json({ error: 'Failed to rescan music directory' });
     }
 });
 
