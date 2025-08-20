@@ -1,0 +1,357 @@
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs').promises;
+const { exec } = require('child_process');
+const util = require('util');
+const execAsync = util.promisify(exec);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const DB_PATH = process.env.DB_PATH || './database/jukebox.db';
+const MUSIC_PATH = process.env.MUSIC_PATH || './music';
+const UPLOAD_PATH = process.env.UPLOAD_PATH || './uploads';
+
+// Middleware
+app.use(express.json());
+app.use(express.static('public'));
+app.use('/music', express.static(MUSIC_PATH));
+
+// Database setup
+const db = new sqlite3.Database(DB_PATH);
+
+// Initialize database tables
+db.serialize(() => {
+    // Users table
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Songs table
+    db.run(`CREATE TABLE IF NOT EXISTS songs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        title TEXT NOT NULL,
+        artist TEXT,
+        duration INTEGER,
+        file_path TEXT NOT NULL,
+        added_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (added_by) REFERENCES users(id)
+    )`);
+
+    // Votes table
+    db.run(`CREATE TABLE IF NOT EXISTS votes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        song_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (song_id) REFERENCES songs(id),
+        UNIQUE(user_id, song_id)
+    )`);
+
+    // Current playlist table
+    db.run(`CREATE TABLE IF NOT EXISTS playlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        song_id INTEGER NOT NULL,
+        vote_count INTEGER DEFAULT 0,
+        position INTEGER,
+        added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (song_id) REFERENCES songs(id)
+    )`);
+
+    // Now playing table
+    db.run(`CREATE TABLE IF NOT EXISTS now_playing (
+        id INTEGER PRIMARY KEY,
+        song_id INTEGER,
+        started_at DATETIME,
+        FOREIGN KEY (song_id) REFERENCES songs(id)
+    )`);
+});
+
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.sendStatus(401);
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+};
+
+// File upload configuration
+const storage = multer.diskStorage({
+    destination: UPLOAD_PATH,
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const name = path.basename(file.originalname, ext);
+        cb(null, `${name}-${Date.now()}${ext}`);
+    }
+});
+
+const upload = multer({
+    storage,
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['.mp3', '.wav', '.flac', '.m4a', '.ogg'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, allowedTypes.includes(ext));
+    },
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
+
+// Routes
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// User registration
+app.post('/api/register', async (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', 
+            [username, hashedPassword], 
+            function(err) {
+                if (err) {
+                    if (err.message.includes('UNIQUE constraint failed')) {
+                        return res.status(409).json({ error: 'Username already exists' });
+                    }
+                    return res.status(500).json({ error: 'Registration failed' });
+                }
+                
+                const token = jwt.sign({ userId: this.lastID, username }, JWT_SECRET);
+                res.json({ token, username, userId: this.lastID });
+            }
+        );
+    } catch (error) {
+        res.status(500).json({ error: 'Registration failed' });
+    }
+});
+
+// User login
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
+        if (err || !user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        
+        try {
+            const validPassword = await bcrypt.compare(password, user.password_hash);
+            if (!validPassword) {
+                return res.status(401).json({ error: 'Invalid credentials' });
+            }
+            
+            const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET);
+            res.json({ token, username: user.username, userId: user.id });
+        } catch (error) {
+            res.status(500).json({ error: 'Login failed' });
+        }
+    });
+});
+
+// Get all songs
+app.get('/api/songs', (req, res) => {
+    const query = `
+        SELECT s.*, 
+               COUNT(v.id) as vote_count,
+               CASE WHEN p.song_id IS NOT NULL THEN 1 ELSE 0 END as in_playlist
+        FROM songs s
+        LEFT JOIN votes v ON s.id = v.song_id
+        LEFT JOIN playlist p ON s.id = p.song_id
+        GROUP BY s.id
+        ORDER BY vote_count DESC, s.title
+    `;
+    
+    db.all(query, (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to fetch songs' });
+        }
+        res.json(rows);
+    });
+});
+
+// Vote for a song
+app.post('/api/vote', authenticateToken, (req, res) => {
+    const { songId } = req.body;
+    const userId = req.user.userId;
+    
+    // Check if user has already voted for this song
+    db.get('SELECT * FROM votes WHERE user_id = ? AND song_id = ?', 
+        [userId, songId], 
+        (err, existingVote) => {
+            if (err) {
+                return res.status(500).json({ error: 'Vote check failed' });
+            }
+            
+            if (existingVote) {
+                return res.status(409).json({ error: 'Already voted for this song' });
+            }
+            
+            // Add vote
+            db.run('INSERT INTO votes (user_id, song_id) VALUES (?, ?)', 
+                [userId, songId], 
+                function(err) {
+                    if (err) {
+                        return res.status(500).json({ error: 'Vote failed' });
+                    }
+                    
+                    // Update or add to playlist
+                    updatePlaylist(songId);
+                    res.json({ message: 'Vote recorded', voteId: this.lastID });
+                }
+            );
+        }
+    );
+});
+
+// Remove vote
+app.delete('/api/vote/:songId', authenticateToken, (req, res) => {
+    const songId = req.params.songId;
+    const userId = req.user.userId;
+    
+    db.run('DELETE FROM votes WHERE user_id = ? AND song_id = ?', 
+        [userId, songId], 
+        function(err) {
+            if (err) {
+                return res.status(500).json({ error: 'Vote removal failed' });
+            }
+            
+            updatePlaylist(songId);
+            res.json({ message: 'Vote removed' });
+        }
+    );
+});
+
+// Get current playlist
+app.get('/api/playlist', (req, res) => {
+    const query = `
+        SELECT p.*, s.title, s.artist, s.duration, s.file_path,
+               COUNT(v.id) as vote_count
+        FROM playlist p
+        JOIN songs s ON p.song_id = s.id
+        LEFT JOIN votes v ON s.id = v.song_id
+        GROUP BY p.id
+        ORDER BY vote_count DESC, p.added_at
+    `;
+    
+    db.all(query, (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to fetch playlist' });
+        }
+        res.json(rows);
+    });
+});
+
+// Get currently playing song
+app.get('/api/now-playing', (req, res) => {
+    const query = `
+        SELECT np.*, s.title, s.artist, s.duration, s.file_path
+        FROM now_playing np
+        JOIN songs s ON np.song_id = s.id
+        WHERE np.id = 1
+    `;
+    
+    db.get(query, (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Failed to fetch current song' });
+        }
+        res.json(row || null);
+    });
+});
+
+// Upload music file
+app.post('/api/upload', authenticateToken, upload.single('music'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    try {
+        // Extract metadata using ffprobe
+        const { stdout } = await execAsync(`ffprobe -v quiet -print_format json -show_format "${req.file.path}"`);
+        const metadata = JSON.parse(stdout);
+        
+        const title = metadata.format.tags?.title || path.basename(req.file.originalname, path.extname(req.file.originalname));
+        const artist = metadata.format.tags?.artist || 'Unknown Artist';
+        const duration = Math.floor(metadata.format.duration);
+        
+        // Add to database
+        db.run('INSERT INTO songs (filename, title, artist, duration, file_path, added_by) VALUES (?, ?, ?, ?, ?, ?)',
+            [req.file.filename, title, artist, duration, req.file.path, req.user.userId],
+            function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Failed to save song info' });
+                }
+                
+                res.json({
+                    id: this.lastID,
+                    title,
+                    artist,
+                    duration,
+                    message: 'Song uploaded successfully'
+                });
+            }
+        );
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ error: 'Failed to process uploaded file' });
+    }
+});
+
+// Helper function to update playlist based on votes
+function updatePlaylist(songId) {
+    // Get current vote count
+    db.get('SELECT COUNT(*) as vote_count FROM votes WHERE song_id = ?', 
+        [songId], 
+        (err, result) => {
+            if (err) return;
+            
+            const voteCount = result.vote_count;
+            
+            if (voteCount > 0) {
+                // Add or update in playlist
+                db.run(`INSERT OR REPLACE INTO playlist (song_id, vote_count, added_at) 
+                        VALUES (?, ?, CURRENT_TIMESTAMP)`, 
+                    [songId, voteCount]
+                );
+            } else {
+                // Remove from playlist if no votes
+                db.run('DELETE FROM playlist WHERE song_id = ?', [songId]);
+            }
+        }
+    );
+}
+
+// Serve the main app
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Jukebox server running on port ${PORT}`);
+    console.log(`Music path: ${MUSIC_PATH}`);
+    console.log(`Database: ${DB_PATH}`);
+});
