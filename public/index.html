@@ -343,7 +343,12 @@
 
             <!-- Songs Tab -->
             <div id="songsTab" class="tab-content active">
-                <h2>All Songs</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>All Songs</h2>
+                    <button onclick="rescanMusic()" style="background: linear-gradient(45deg, #4834d4, #686de0);">
+                        🔄 Rescan Music Folder
+                    </button>
+                </div>
                 <div id="songsList" class="song-list"></div>
             </div>
 
@@ -671,6 +676,42 @@
             setTimeout(() => {
                 messageDiv.innerHTML = '';
             }, duration);
+        }
+
+        // Rescan music directory
+        async function rescanMusic() {
+            if (!authToken) {
+                showMessage('Please login to rescan music', 'error');
+                return;
+            }
+
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '🔄 Scanning...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/api/rescan', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Music directory rescanned successfully!', 'success');
+                    loadSongs(); // Refresh the song list
+                } else {
+                    showMessage(data.error || 'Rescan failed', 'error');
+                }
+            } catch (error) {
+                showMessage('Rescan failed. Please try again.', 'error');
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
         }
 
         // Auto-refresh every 30 seconds
