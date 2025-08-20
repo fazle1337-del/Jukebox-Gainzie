@@ -5,7 +5,7 @@ services:
     build: .
     container_name: pi_jukebox
     ports:
-      - "3000:3000"
+      - "3001:3000"  # Changed to 3001 to avoid conflicts with other services using 3000
     volumes:
       # Mount your music collection
       - ./music:/app/music:ro
@@ -34,21 +34,22 @@ services:
         reservations:
           memory: 256M
 
-  # Optional: Add a reverse proxy for HTTPS
-  nginx:
-    image: nginx:alpine
-    container_name: jukebox_proxy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - jukebox
-    networks:
-      - jukebox_network
-    restart: unless-stopped
+  # Optional: Add a reverse proxy for HTTPS (disabled by default)
+  # Uncomment the nginx section below if you want reverse proxy features
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: jukebox_proxy
+  #   ports:
+  #     - "3002:80"      # Using port 3002 to avoid conflicts
+  #     - "3003:443"     # Using port 3003 for HTTPS
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - jukebox
+  #   networks:
+  #     - jukebox_network
+  #   restart: unless-stopped
 
 volumes:
   jukebox_db:
