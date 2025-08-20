@@ -62,177 +62,316 @@ docker-compose ps
    - Open your browser and go to `http://your-pi-ip:3000`
    - Or `http://localhost:3000` if accessing from the Pi itself
 
-### Directory Structure
+## 📁 Project Structure
 
 ```
-pi-jukebox/
-├── Dockerfile
-├── docker-compose.yml
-├── server.js
-├── package.json
-├── public/
-│   └── index.html
-├── music/           # Your music collection (read-only)
-├── data/            # App data storage
-├── uploads/         # User uploaded music
-└── database/        # SQLite database
+Jukebox-Gainzie/
+├── 🐳 Dockerfile              # Container configuration
+├── 🐳 docker-compose.yml      # Multi-container orchestration
+├── 🚀 setup.sh                # Automated setup script
+├── ⚙️ server.js               # Backend Node.js application
+├── 📦 package.json            # Node.js dependencies
+├── 📖 README.md               # This file
+├── 🌐 public/
+│   └── index.html             # Frontend web interface
+├── 🎵 music/                  # Your music collection (read-only)
+├── 💾 data/                   # Application data storage
+├── 📤 uploads/                # User uploaded music files
+└── 🗄️ database/              # SQLite database storage
 ```
 
-## Usage
+## 🎮 How to Use
 
 ### First Time Setup
-
-1. **Access the web interface** at `http://your-pi-ip:3000`
-2. **Register** a new user account
-3. **Upload music** or vote on existing songs
-4. **Watch the playlist** update based on votes!
+1. **Open your browser** and go to `http://your-pi-ip:3001`
+2. **Create an account** using the register form
+3. **Start voting** on existing songs or upload new ones!
 
 ### Adding Music
 
-**Option 1: Copy files directly**
+**Method 1: Direct file copy (bulk)**
 ```bash
-# Copy music files to the music directory
+# Copy music files directly to the music directory
 cp /path/to/your/songs/* ./music/
-# Restart the container to scan new files
-docker-compose restart
+# Restart to scan new files
+docker-compose restart jukebox
 ```
 
-**Option 2: Upload through web interface**
-- Use the "Upload Music" tab in the web app
-- Supports drag-and-drop and multiple file selection
-- Automatically extracts metadata (title, artist, duration)
+**Method 2: Web upload (individual files)**
+- Use the "Upload Music" tab in the web interface
+- Drag and drop or select multiple files
+- Metadata is extracted automatically
 
-### Managing the App
+### Using the Jukebox
+- **Vote for songs** to add them to the playlist
+- **Higher voted songs** appear first in the queue
+- **Remove your vote** by clicking the vote button again
+- **Upload new music** through the web interface
+- **View the playlist** to see what's coming up next
+
+## 🛠️ Management & Maintenance
+
+### Common Commands
 
 ```bash
 # View logs
-docker-compose logs -f
+docker-compose logs -f jukebox
 
-# Stop the app
+# Restart the jukebox
+docker-compose restart jukebox
+
+# Stop the jukebox
 docker-compose down
 
-# Update the app (after making changes)
-docker-compose down
-docker-compose up -d --build
+# Update after making changes
+docker-compose down && docker-compose up -d --build
 
-# Backup your data
+# Check status
+docker-compose ps
+
+# View resource usage
+docker stats pi_jukebox
+```
+
+### Backup Your Data
+
+```bash
+# Create a backup
 tar -czf jukebox-backup-$(date +%Y%m%d).tar.gz data/ database/ uploads/
 
-# View database (optional)
-sqlite3 database/jukebox.db
+# Restore from backup
+tar -xzf jukebox-backup-YYYYMMDD.tar.gz
 ```
 
-## Configuration
+### Database Management
 
-### Environment Variables
-
-Edit `docker-compose.yml` to customize:
-
-- `JWT_SECRET`: Secret key for user authentication
-- `MAX_VOTES_PER_USER`: Limit votes per user (default: 5)
-- `PLAYLIST_MAX_SIZE`: Maximum playlist size (default: 50)
-
-### Network Access
-
-To access from other devices on your network:
-
-1. **Find your Pi's IP address:**
 ```bash
-ip addr show | grep 'inet ' | grep -v '127.0.0.1'
+# Access SQLite database directly (optional)
+sqlite3 database/jukebox.db
+
+# Common queries:
+# .tables                    # List all tables
+# SELECT * FROM users;       # View all users
+# SELECT * FROM songs;       # View all songs
+# SELECT * FROM votes;       # View all votes
 ```
 
-2. **Access from other devices:**
-   - `http://192.168.1.XXX:3000` (replace with your Pi's IP)
+## 🌐 Network Access & Integration
 
-3. **Optional: Set up port forwarding** on your router for external access
+### Access from Other Devices
+```bash
+# Find your Pi's IP address
+hostname -I | awk '{print $1}'
 
-## API Endpoints
+# Access from any device on your network
+# http://YOUR_PI_IP:3001
+```
 
-The app provides a REST API:
+### Integration with Umbrel/Home Server
+If you're running this on a Pi with Umbrel or other services:
 
-- `POST /api/register` - Register new user
-- `POST /api/login` - User login
-- `GET /api/songs` - Get all songs with vote counts
-- `POST /api/vote` - Vote for a song
-- `DELETE /api/vote/:songId` - Remove vote
-- `GET /api/playlist` - Get current playlist
-- `GET /api/now-playing` - Get currently playing song
-- `POST /api/upload` - Upload music file
+1. **Add to your dashboard** (Dashy, Homer, etc.)
+2. **Set up reverse proxy** through nginx-proxy-manager
+3. **Create subdomain** like `jukebox.yourdomain.com`
 
-## Troubleshooting
+### Firewall Configuration
+```bash
+# Allow access through UFW (if enabled)
+sudo ufw allow 3001
+```
+
+## 🔍 Troubleshooting
 
 ### Common Issues
 
-**Container won't start:**
+**🐳 Container won't start**
 ```bash
-# Check logs
-docker-compose logs
-
-# Check disk space
-df -h
-
-# Rebuild container
-docker-compose down
-docker-compose up -d --build
+docker-compose logs jukebox
+docker system prune  # Clean up if disk space issues
 ```
 
-**Can't access from other devices:**
-- Check Pi's firewall: `sudo ufw status`
-- Ensure Pi is on same network
-- Try `http://pi-ip:3000` instead of `localhost`
-
-**Music files not showing:**
-- Check file permissions: `ls -la music/`
-- Supported formats: MP3, WAV, FLAC, M4A, OGG
-- Restart container after adding files
-
-**Database errors:**
+**🌐 Can't access from other devices**
 ```bash
-# Check database directory permissions
+# Check if service is running
+docker-compose ps
+
+# Verify port is open
+sudo netstat -tlnp | grep :3001
+
+# Test local access first
+curl http://localhost:3001/health
+```
+
+**🎵 Music files not showing**
+```bash
+# Check file permissions
+ls -la music/
+
+# Verify supported formats (MP3, WAV, FLAC, M4A, OGG)
+file music/*.mp3
+
+# Restart to rescan
+docker-compose restart jukebox
+```
+
+**📊 Database errors**
+```bash
+# Check database permissions
 ls -la database/
 
-# Reset database (WARNING: deletes all users and votes)
-rm database/jukebox.db
-docker-compose restart
-```
-
-### Performance Tips
-
-**For better performance on Pi 5:**
-- Use high-quality SD card (Class 10 or better)
-- Consider USB 3.0 storage for large music collections
-- Limit concurrent users (5-10 recommended)
-- Use compressed audio formats (MP3) for faster loading
-
-## Security Notes
-
-- Change the default JWT secret in production
-- Consider adding HTTPS with the included nginx configuration
-- Limit network access if needed
-- Regularly backup your database and uploads
-
-## Development
-
-To modify the app:
-
-1. **Edit files** as needed
-2. **Rebuild container:**
-```bash
+# Reset database (⚠️ WARNING: Deletes all users and votes!)
 docker-compose down
-docker-compose up -d --build
+rm database/jukebox.db
+docker-compose up -d
 ```
 
-3. **For development:**
+### Performance Optimization
+
+**For Raspberry Pi 5:**
+- ✅ Use high-quality SD card (Class 10+)
+- ✅ Consider USB 3.0 storage for large music collections
+- ✅ Limit concurrent users (5-10 recommended)
+- ✅ Use compressed audio formats (MP3) for faster loading
+- ✅ Regular cleanup of old uploads
+
+### Getting Help
+
+**Logs are your friend:**
 ```bash
-# Run without Docker
-npm install
-node server.js
+# Application logs
+docker-compose logs -f jukebox
+
+# System resources
+htop
+df -h
+
+# Network connectivity
+ss -tlnp | grep :3001
 ```
 
-## License
+## 🔒 Security Considerations
 
-MIT License - feel free to modify and distribute!
+### Important Security Settings
+
+1. **Change the JWT secret:**
+```bash
+# Edit .env file
+JWT_SECRET="your-unique-secret-key-here-make-it-long-and-random"
+```
+
+2. **Network security:**
+   - Only expose to trusted networks
+   - Consider VPN access for remote use
+   - Use HTTPS in production (via reverse proxy)
+
+3. **File permissions:**
+```bash
+# Secure your directories
+chmod 755 data/ database/ uploads/
+chmod 644 .env
+```
+
+## 🚀 Advanced Configuration
+
+### Custom Domains with Reverse Proxy
+
+If you have nginx-proxy-manager or similar:
+
+1. **Create new proxy host**
+2. **Forward to:** `localhost:3001`
+3. **Domain:** `jukebox.yourdomain.com`
+4. **Enable SSL** (Let's Encrypt)
+
+### Environment Variables Reference
+
+```bash
+# .env file options
+JWT_SECRET=your-secret-key              # Authentication secret
+NODE_ENV=production                     # Environment mode
+DB_PATH=/app/database/jukebox.db        # Database location
+MUSIC_PATH=/app/music                   # Music directory
+UPLOAD_PATH=/app/uploads                # Upload directory
+MAX_VOTES_PER_USER=5                    # Vote limit per user
+PLAYLIST_MAX_SIZE=50                    # Max playlist size
+PORT=3000                               # Internal port
+```
+
+## 🛡️ API Reference
+
+The jukebox provides a RESTful API for integration:
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/register` | POST | Register new user | ❌ |
+| `/api/login` | POST | User login | ❌ |
+| `/api/songs` | GET | Get all songs with vote counts | ❌ |
+| `/api/vote` | POST | Vote for a song | ✅ |
+| `/api/vote/:songId` | DELETE | Remove vote | ✅ |
+| `/api/playlist` | GET | Get current playlist | ❌ |
+| `/api/now-playing` | GET | Get currently playing song | ❌ |
+| `/api/upload` | POST | Upload music file | ✅ |
+| `/health` | GET | Health check | ❌ |
+
+### Example API Usage
+
+```bash
+# Register a new user
+curl -X POST http://localhost:3001/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"testpass"}'
+
+# Vote for a song
+curl -X POST http://localhost:3001/api/vote \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"songId":1}'
+```
+
+## 📈 Roadmap & Future Features
+
+### Planned Features
+- 🎵 **Audio streaming** - Play music directly through the web interface
+- 🎚️ **Volume control** - Adjust playback volume
+- 🔀 **Shuffle mode** - Random playlist ordering
+- 📱 **PWA support** - Install as a mobile app
+- 👥 **User roles** - Admin controls and permissions
+- 🎨 **Themes** - Customizable UI themes
+- 📊 **Analytics** - Voting statistics and reports
+- 🔄 **Auto-DJ mode** - Automatic playlist management
+
+### Contributing
+We welcome contributions! Here's how you can help:
+
+1. 🐛 **Report bugs** via GitHub issues
+2. 💡 **Suggest features** via GitHub discussions
+3. 🔧 **Submit pull requests** with improvements
+4. 📖 **Improve documentation**
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+### What this means:
+- ✅ Free to use for personal and commercial projects
+- ✅ Modify and distribute as you wish
+- ✅ No warranty or support guarantees
+- ✅ Attribution appreciated but not required
+
+## 🙏 Acknowledgments
+
+- **Node.js & Express** - Backend framework
+- **SQLite** - Lightweight database
+- **Docker** - Containerization platform
+- **Raspberry Pi Foundation** - Amazing hardware
+- **The open-source community** - For inspiration and tools
+
+## 📞 Support & Community
+
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/fazle1337-del/Jukebox-Gainzie/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/fazle1337-del/Jukebox-Gainzie/discussions)
+- 📖 **Documentation**: This README and code comments
+- ⭐ **Star the repo** if you find it useful!
 
 ---
 
-Enjoy your collaborative jukebox! 🎵
+**Happy listening!** 🎵 Enjoy your collaborative jukebox experience!
