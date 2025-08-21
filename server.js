@@ -9,15 +9,125 @@ const { exec } = require('child_process');
 const util = require('util');
 const execAsync = util.promisify(exec);
 
-// ADD: Import the music player
-const MusicPlayer = require('./musicPlayer');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const DB_PATH = process.env.DB_PATH || './database/jukebox.db';
 const MUSIC_PATH = process.env.MUSIC_PATH || './music';
 const UPLOAD_PATH = process.env.UPLOAD_PATH || './uploads';
+
+// Simple MusicPlayer class (stub implementation)
+class MusicPlayer {
+    constructor(db) {
+        this.db = db;
+        this.isPlaying = false;
+        this.volume = 50;
+        this.currentSong = null;
+        this.eventListeners = {};
+    }
+    
+    on(event, callback) {
+        if (!this.eventListeners[event]) {
+            this.eventListeners[event] = [];
+        }
+        this.eventListeners[event].push(callback);
+        console.log(`MusicPlayer: Registered event ${event}`);
+    }
+    
+    emit(event, data) {
+        if (this.eventListeners[event]) {
+            this.eventListeners[event].forEach(callback => callback(data));
+        }
+    }
+    
+    getCurrentStatus() {
+        return {
+            isPlaying: this.isPlaying,
+            currentSong: this.currentSong,
+            volume: this.volume
+        };
+    }
+    
+    async getCurrentPlaylist() {
+        return new Promise((resolve, reject) => {
+            const query = `
+                SELECT p.*, s.title, s.artist, s.duration, s.file_path,
+                       COUNT(v.id) as vote_count
+                FROM playlist p
+                JOIN songs s ON p.song_id = s.id
+                LEFT JOIN votes v ON s.id = v.song_id
+                GROUP BY p.id
+                ORDER BY vote_count DESC, p.added_at
+            `;
+            
+            this.db.all(query, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+    }
+    
+    async playNext() {
+        console.log('MusicPlayer: playNext() called');
+        // Get next song from playlist
+        const query = `
+            SELECT s.*, COUNT(v.id) as vote_count
+            FROM playlist p
+            JOIN songs s ON p.song_id = s.id
+            LEFT JOIN votes v ON s.id = v.song_id
+            GROUP BY s.id
+            ORDER BY vote_count DESC, p.added_at ASC
+            LIMIT 1
+        `;
+        
+        this.db.get(query, (err, song) => {
+            if (err || !song) {
+                console.log('No songs in playlist');
+                this.emit('playlistEmpty');
+                return;
+            }
+            
+            this.currentSong = song;
+            this.isPlaying = true;
+            
+            console.log(`Now playing: ${song.title} by ${song.artist}`);
+            this.emit('songStarted', song);
+            
+            // Simulate song duration (for demo purposes)
+            setTimeout(() => {
+                this.songFinished();
+            }, 30000); // 30 seconds for demo
+        });
+    }
+    
+    songFinished() {
+        if (this.currentSong) {
+            this.emit('songFinished', this.currentSong);
+            this.isPlaying = false;
+            this.currentSong = null;
+            
+            // Play next song if available
+            setTimeout(() => this.playNext(), 1000);
+        }
+    }
+    
+    stopCurrentSong() {
+        console.log('MusicPlayer: stopCurrentSong() called');
+        if (this.currentSong) {
+            this.emit('songFinished', this.currentSong);
+        }
+        this.isPlaying = false;
+        this.currentSong = null;
+        
+        // Play next song
+        setTimeout(() => this.playNext(), 1000);
+    }
+    
+    setVolume(volume) {
+        this.volume = Math.max(0, Math.min(100, volume));
+        console.log(`MusicPlayer: Volume set to ${this.volume}%`);
+    }
+}
 
 // Middleware
 app.use(express.json());
@@ -80,10 +190,10 @@ db.serialize(() => {
     )`);
 });
 
-// ADD: Initialize music player after database setup
+// Initialize music player after database setup
 const musicPlayer = new MusicPlayer(db);
 
-// ADD: Music player event listeners
+// Music player event listeners
 musicPlayer.on('songStarted', (song) => {
     console.log(`🎵 Started playing: ${song.title} by ${song.artist}`);
     
@@ -233,7 +343,15 @@ app.get('/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-// User registration
+// Debug endpoint (remove in production)
+app.get('/api/debug/token', authenticateToken, (req, res) => {
+    res.json({ 
+        user: req.user,
+        message: 'Token is valid'
+    });
+});
+
+// User registration - FIXED
 app.post('/api/register', async (req, res) => {
     const { username, password } = req.body;
     
@@ -254,6 +372,7 @@ app.post('/api/register', async (req, res) => {
                     return res.status(500).json({ error: 'Registration failed' });
                 }
                 
+                // FIXED: Use consistent property name
                 const token = jwt.sign({ userId: this.lastID, username }, JWT_SECRET);
                 res.json({ token, username, userId: this.lastID });
             }
@@ -263,7 +382,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// User login
+// User login - FIXED
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     
@@ -278,6 +397,7 @@ app.post('/api/login', (req, res) => {
                 return res.status(401).json({ error: 'Invalid credentials' });
             }
             
+            // FIXED: Use consistent property name
             const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET);
             res.json({ token, username: user.username, userId: user.id });
         } catch (error) {
@@ -301,50 +421,81 @@ app.get('/api/songs', (req, res) => {
     
     db.all(query, (err, rows) => {
         if (err) {
+            console.error('Error fetching songs:', err);
             return res.status(500).json({ error: 'Failed to fetch songs' });
         }
         res.json(rows);
     });
 });
 
-// MODIFIED: Enhanced vote endpoint that triggers music playback
+// Vote endpoint - ENHANCED with better error handling
 app.post('/api/vote', authenticateToken, (req, res) => {
     const { songId } = req.body;
     const userId = req.user.userId;
     
-    // Check if user has already voted for this song
-    db.get('SELECT * FROM votes WHERE user_id = ? AND song_id = ?', 
-        [userId, songId], 
-        (err, existingVote) => {
-            if (err) {
-                return res.status(500).json({ error: 'Vote check failed' });
-            }
-            
-            if (existingVote) {
-                return res.status(409).json({ error: 'Already voted for this song' });
-            }
-            
-            // Add vote
-            db.run('INSERT INTO votes (user_id, song_id) VALUES (?, ?)', 
-                [userId, songId], 
-                function(err) {
-                    if (err) {
-                        return res.status(500).json({ error: 'Vote failed' });
-                    }
-                    
-                    // Update playlist
-                    updatePlaylist(songId);
-                    
-                    // If nothing is currently playing, start playing
-                    if (!musicPlayer.isPlaying) {
-                        setTimeout(() => musicPlayer.playNext(), 1000);
-                    }
-                    
-                    res.json({ message: 'Vote recorded', voteId: this.lastID });
-                }
-            );
+    if (!songId) {
+        return res.status(400).json({ error: 'Song ID is required' });
+    }
+    
+    // Check if song exists first
+    db.get('SELECT id FROM songs WHERE id = ?', [songId], (err, song) => {
+        if (err) {
+            console.error('Database error checking song:', err);
+            return res.status(500).json({ error: 'Database error' });
         }
-    );
+        
+        if (!song) {
+            return res.status(404).json({ error: 'Song not found' });
+        }
+        
+        // Check if user has already voted for this song
+        db.get('SELECT * FROM votes WHERE user_id = ? AND song_id = ?', 
+            [userId, songId], 
+            (err, existingVote) => {
+                if (err) {
+                    console.error('Error checking existing vote:', err);
+                    return res.status(500).json({ error: 'Vote check failed' });
+                }
+                
+                if (existingVote) {
+                    // Toggle off - remove vote
+                    db.run('DELETE FROM votes WHERE user_id = ? AND song_id = ?', 
+                        [userId, songId], 
+                        function(err) {
+                            if (err) {
+                                console.error('Error removing vote:', err);
+                                return res.status(500).json({ error: 'Vote removal failed' });
+                            }
+                            
+                            updatePlaylist(songId);
+                            res.json({ message: 'Vote removed', action: 'removed' });
+                        }
+                    );
+                } else {
+                    // Add vote
+                    db.run('INSERT INTO votes (user_id, song_id) VALUES (?, ?)', 
+                        [userId, songId], 
+                        function(err) {
+                            if (err) {
+                                console.error('Error adding vote:', err);
+                                return res.status(500).json({ error: 'Vote failed' });
+                            }
+                            
+                            // Update playlist
+                            updatePlaylist(songId);
+                            
+                            // If nothing is currently playing, start playing
+                            if (!musicPlayer.isPlaying) {
+                                setTimeout(() => musicPlayer.playNext(), 1000);
+                            }
+                            
+                            res.json({ message: 'Vote recorded', voteId: this.lastID, action: 'added' });
+                        }
+                    );
+                }
+            }
+        );
+    });
 });
 
 // Remove vote
@@ -356,6 +507,7 @@ app.delete('/api/vote/:songId', authenticateToken, (req, res) => {
         [userId, songId], 
         function(err) {
             if (err) {
+                console.error('Error removing vote:', err);
                 return res.status(500).json({ error: 'Vote removal failed' });
             }
             
@@ -379,13 +531,14 @@ app.get('/api/playlist', (req, res) => {
     
     db.all(query, (err, rows) => {
         if (err) {
+            console.error('Error fetching playlist:', err);
             return res.status(500).json({ error: 'Failed to fetch playlist' });
         }
         res.json(rows);
     });
 });
 
-// MODIFIED: Enhanced now-playing endpoint that uses music player status
+// Get now playing
 app.get('/api/now-playing', (req, res) => {
     const status = musicPlayer.getCurrentStatus();
     res.json(status.currentSong || null);
@@ -411,6 +564,7 @@ app.post('/api/upload', authenticateToken, upload.single('music'), async (req, r
             [req.file.filename, title, artist, duration, req.file.path, req.user.userId],
             function(err) {
                 if (err) {
+                    console.error('Error saving song:', err);
                     return res.status(500).json({ error: 'Failed to save song info' });
                 }
                 
@@ -440,7 +594,7 @@ app.post('/api/rescan', authenticateToken, async (req, res) => {
     }
 });
 
-// ADD: New music player control endpoints
+// Music player control endpoints
 
 // Get current player status
 app.get('/api/player/status', (req, res) => {
@@ -496,7 +650,10 @@ function updatePlaylist(songId) {
     db.get('SELECT COUNT(*) as vote_count FROM votes WHERE song_id = ?', 
         [songId], 
         (err, result) => {
-            if (err) return;
+            if (err) {
+                console.error('Error getting vote count:', err);
+                return;
+            }
             
             const voteCount = result.vote_count;
             
@@ -504,11 +661,16 @@ function updatePlaylist(songId) {
                 // Add or update in playlist
                 db.run(`INSERT OR REPLACE INTO playlist (song_id, vote_count, added_at) 
                         VALUES (?, ?, CURRENT_TIMESTAMP)`, 
-                    [songId, voteCount]
+                    [songId, voteCount],
+                    (err) => {
+                        if (err) console.error('Error updating playlist:', err);
+                    }
                 );
             } else {
                 // Remove from playlist if no votes
-                db.run('DELETE FROM playlist WHERE song_id = ?', [songId]);
+                db.run('DELETE FROM playlist WHERE song_id = ?', [songId], (err) => {
+                    if (err) console.error('Error removing from playlist:', err);
+                });
             }
         }
     );
@@ -523,4 +685,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Jukebox server running on port ${PORT}`);
     console.log(`Music path: ${MUSIC_PATH}`);
     console.log(`Database: ${DB_PATH}`);
+    console.log(`Upload path: ${UPLOAD_PATH}`);
 });
