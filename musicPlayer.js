@@ -18,14 +18,10 @@ class MusicPlayer extends EventEmitter {
     async getCurrentPlaylist() {
         return new Promise((resolve, reject) => {
             const query = `
-                SELECT s.*, COALESCE(vote_count, 0) as votes 
+                SELECT s.*, COUNT(v.id) as votes 
                 FROM songs s 
-                LEFT JOIN (
-                    SELECT song_id, COUNT(*) as vote_count 
-                    FROM votes 
-                    GROUP BY song_id
-                ) v ON s.id = v.song_id 
-                WHERE COALESCE(vote_count, 0) > 0
+                INNER JOIN votes v ON s.id = v.song_id 
+                GROUP BY s.id
                 ORDER BY votes DESC, s.title ASC
             `;
             this.db.all(query, [], (err, rows) => {
@@ -46,18 +42,18 @@ class MusicPlayer extends EventEmitter {
         }
 
         this.currentSong = song;
-        const songPath = path.join('/app/music', song.filename);
+        const songPath = song.file_path; // Use the full file_path from database
         
-        // Use mpg123 for MP3 files, or sox for other formats
-        // Install these in your Dockerfile: RUN apt-get update && apt-get install -y mpg123 sox
+        // Use mpg123 for MP3 files, or sox/ffplay for other formats
+        // Install these in your Dockerfile: RUN apt-get update && apt-get install -y mpg123 sox ffmpeg
         let player;
         const ext = path.extname(song.filename).toLowerCase();
         
         if (ext === '.mp3') {
             player = spawn('mpg123', ['-q', '--gain', this.volume.toString(), songPath]);
         } else {
-            // For other formats (wav, flac, m4a, ogg)
-            player = spawn('play', [songPath, 'vol', (this.volume / 100).toString()]);
+            // For other formats, use ffplay (part of ffmpeg)
+            player = spawn('ffplay', ['-nodisp', '-autoexit', '-volume', this.volume.toString(), songPath]);
         }
 
         this.currentProcess = player;
