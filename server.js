@@ -9,6 +9,9 @@ const { exec } = require('child_process');
 const util = require('util');
 const execAsync = util.promisify(exec);
 
+// ADD: Import the music player
+const MusicPlayer = require('./musicPlayer');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -75,6 +78,38 @@ db.serialize(() => {
         started_at DATETIME,
         FOREIGN KEY (song_id) REFERENCES songs(id)
     )`);
+});
+
+// ADD: Initialize music player after database setup
+const musicPlayer = new MusicPlayer(db);
+
+// ADD: Music player event listeners
+musicPlayer.on('songStarted', (song) => {
+    console.log(`🎵 Started playing: ${song.title} by ${song.artist}`);
+    
+    // Update now_playing table
+    db.run('INSERT OR REPLACE INTO now_playing (id, song_id, started_at) VALUES (1, ?, CURRENT_TIMESTAMP)', 
+        [song.id], (err) => {
+            if (err) console.error('Error updating now_playing:', err);
+        });
+});
+
+musicPlayer.on('songFinished', (song) => {
+    console.log(`✅ Finished playing: ${song.title}`);
+    
+    // Clear now_playing table
+    db.run('DELETE FROM now_playing WHERE id = 1', (err) => {
+        if (err) console.error('Error clearing now_playing:', err);
+    });
+    
+    // Remove from playlist after playing
+    db.run('DELETE FROM playlist WHERE song_id = ?', [song.id], (err) => {
+        if (err) console.error('Error removing from playlist:', err);
+    });
+});
+
+musicPlayer.on('playlistEmpty', () => {
+    console.log('📭 Playlist is empty, waiting for votes...');
 });
 
 // Music scanning function
@@ -272,7 +307,7 @@ app.get('/api/songs', (req, res) => {
     });
 });
 
-// Vote for a song
+// MODIFIED: Enhanced vote endpoint that triggers music playback
 app.post('/api/vote', authenticateToken, (req, res) => {
     const { songId } = req.body;
     const userId = req.user.userId;
@@ -297,8 +332,14 @@ app.post('/api/vote', authenticateToken, (req, res) => {
                         return res.status(500).json({ error: 'Vote failed' });
                     }
                     
-                    // Update or add to playlist
+                    // Update playlist
                     updatePlaylist(songId);
+                    
+                    // If nothing is currently playing, start playing
+                    if (!musicPlayer.isPlaying) {
+                        setTimeout(() => musicPlayer.playNext(), 1000);
+                    }
+                    
                     res.json({ message: 'Vote recorded', voteId: this.lastID });
                 }
             );
@@ -344,21 +385,10 @@ app.get('/api/playlist', (req, res) => {
     });
 });
 
-// Get currently playing song
+// MODIFIED: Enhanced now-playing endpoint that uses music player status
 app.get('/api/now-playing', (req, res) => {
-    const query = `
-        SELECT np.*, s.title, s.artist, s.duration, s.file_path
-        FROM now_playing np
-        JOIN songs s ON np.song_id = s.id
-        WHERE np.id = 1
-    `;
-    
-    db.get(query, (err, row) => {
-        if (err) {
-            return res.status(500).json({ error: 'Failed to fetch current song' });
-        }
-        res.json(row || null);
-    });
+    const status = musicPlayer.getCurrentStatus();
+    res.json(status.currentSong || null);
 });
 
 // Upload music file
@@ -407,6 +437,56 @@ app.post('/api/rescan', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Rescan error:', error);
         res.status(500).json({ error: 'Failed to rescan music directory' });
+    }
+});
+
+// ADD: New music player control endpoints
+
+// Get current player status
+app.get('/api/player/status', (req, res) => {
+    const status = musicPlayer.getCurrentStatus();
+    res.json(status);
+});
+
+// Get current playlist (using music player method)
+app.get('/api/player/playlist', async (req, res) => {
+    try {
+        const playlist = await musicPlayer.getCurrentPlaylist();
+        res.json(playlist);
+    } catch (error) {
+        console.error('Error fetching playlist:', error);
+        res.status(500).json({ error: 'Failed to fetch playlist' });
+    }
+});
+
+// Skip current song (requires authentication)
+app.post('/api/player/skip', authenticateToken, (req, res) => {
+    if (musicPlayer.isPlaying) {
+        musicPlayer.stopCurrentSong();
+        res.json({ message: 'Song skipped' });
+    } else {
+        res.json({ message: 'No song currently playing' });
+    }
+});
+
+// Set volume (requires authentication)
+app.post('/api/player/volume', authenticateToken, (req, res) => {
+    const { volume } = req.body;
+    if (typeof volume === 'number' && volume >= 0 && volume <= 100) {
+        musicPlayer.setVolume(volume);
+        res.json({ message: 'Volume updated', volume: musicPlayer.volume });
+    } else {
+        res.status(400).json({ error: 'Volume must be a number between 0 and 100' });
+    }
+});
+
+// Start playing manually (requires authentication)
+app.post('/api/player/start', authenticateToken, async (req, res) => {
+    if (!musicPlayer.isPlaying) {
+        await musicPlayer.playNext();
+        res.json({ message: 'Playback started' });
+    } else {
+        res.json({ message: 'Already playing' });
     }
 });
 
