@@ -2,13 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install system dependencies for audio processing
-RUN apk add --no-cache \
+# Install audio players and dependencies
+RUN apt-get update && apt-get install -y \
+    mpg123 \
+    sox \
+    libsox-fmt-all \
     ffmpeg \
-    python3 \
-    make \
-    g++ \
-    sqlite
+    alsa-utils \
+    pulseaudio \
+    && rm -rf /var/lib/apt/lists/*
+
+# If you're running on a Raspberry Pi, you might also need:
+# RUN apt-get install -y libasound2-dev
 
 # Copy package files
 COPY package*.json ./
