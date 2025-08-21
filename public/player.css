@@ -1,0 +1,129 @@
+/* player.css - Music Player Status Styles */
+
+.player-status-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.now-playing h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+.song-info {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.song-info strong {
+    font-size: 1.3em;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.song-info span {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+.song-info small {
+    opacity: 0.7;
+    font-size: 0.9em;
+}
+
+.player-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-skip, .btn-start {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+}
+
+.btn-skip:hover, .btn-start:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.volume-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-control label {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.volume-slider {
+    width: 150px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.now-playing.idle {
+    text-align: center;
+    opacity: 0.8;
+}
+
+.now-playing.idle p {
+    margin: 15px 0;
+    font-size: 1.1em;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .player-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .volume-control {
+        width: 100%;
+    }
+    
+    .volume-slider {
+        width: 200px;
+    }
+}
