@@ -206,20 +206,15 @@ musicPlayer.on('songStarted', (song) => {
 
 musicPlayer.on('songFinished', (song) => {
     console.log(`✅ Finished playing: ${song.title}`);
-    
-    // Clear now_playing table
     db.run('DELETE FROM now_playing WHERE id = 1', (err) => {
         if (err) console.error('Error clearing now_playing:', err);
     });
-    
-    // Remove from playlist after playing
-   // db.run('DELETE FROM playlist WHERE song_id = ?', [song.id], (err) => {
-    //    if (err) console.error('Error removing from playlist:', err);
+    // Remove all votes for the song that just finished
+    db.run('DELETE FROM votes WHERE song_id = ?', [song.id], (err) => {
+        if (err) console.error('Error removing votes for finished song:', err);
+        // Update playlist after votes removed
+        updatePlaylist(song.id);
     });
-
-
-musicPlayer.on('playlistEmpty', () => {
-    console.log('📭 Playlist is empty, waiting for votes...');
 });
 
 // Music scanning function
