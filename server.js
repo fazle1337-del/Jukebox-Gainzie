@@ -95,8 +95,8 @@ class MusicPlayer {
             
             // Simulate song duration (for demo purposes)
             setTimeout(() => {
-                this.songFinished();
-            }, 30000); // 30 seconds for demo
+            this.songFinished();
+            }, (song.duration ? song.duration : 30) * 1000); // Use actual duration if available
         });
     }
     
