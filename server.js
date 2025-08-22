@@ -213,10 +213,10 @@ musicPlayer.on('songFinished', (song) => {
     });
     
     // Remove from playlist after playing
-    db.run('DELETE FROM playlist WHERE song_id = ?', [song.id], (err) => {
-        if (err) console.error('Error removing from playlist:', err);
+   // db.run('DELETE FROM playlist WHERE song_id = ?', [song.id], (err) => {
+    //    if (err) console.error('Error removing from playlist:', err);
     });
-});
+
 
 musicPlayer.on('playlistEmpty', () => {
     console.log('📭 Playlist is empty, waiting for votes...');
