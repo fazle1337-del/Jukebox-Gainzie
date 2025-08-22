@@ -263,12 +263,13 @@ async function scanMusicDirectory() {
                 try {
                     const { stdout } = await execAsync(`ffprobe -v quiet -print_format json -show_format "${filePath}"`);
                     const metadata = JSON.parse(stdout);
-                    
+
                     title = metadata.format.tags?.title || metadata.format.tags?.Title || title;
                     artist = metadata.format.tags?.artist || metadata.format.tags?.Artist || artist;
-                    duration = Math.floor(metadata.format.duration) || 0;
+                    duration = Math.floor(metadata.format.duration) || 180; // <-- fallback to 180 seconds
                 } catch (metadataError) {
                     console.log(`Could not extract metadata for ${file}, using filename`);
+                    duration = 180; // <-- fallback if ffprobe fails
                 }
                 
                 // Add to database
@@ -557,7 +558,7 @@ app.post('/api/upload', authenticateToken, upload.single('music'), async (req, r
         
         const title = metadata.format.tags?.title || path.basename(req.file.originalname, path.extname(req.file.originalname));
         const artist = metadata.format.tags?.artist || 'Unknown Artist';
-        const duration = Math.floor(metadata.format.duration);
+        const duration = Math.floor(metadata.format.duration)|| 180; // fallback to 180 seconds
         
         // Add to database
         db.run('INSERT INTO songs (filename, title, artist, duration, file_path, added_by) VALUES (?, ?, ?, ?, ?, ?)',
@@ -578,8 +579,28 @@ app.post('/api/upload', authenticateToken, upload.single('music'), async (req, r
             }
         );
     } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ error: 'Failed to process uploaded file' });
+    console.error('Upload error:', error);
+    // Fallback metadata if ffprobe fails
+    const title = path.basename(req.file.originalname, path.extname(req.file.originalname));
+    const artist = 'Unknown Artist';
+    const duration = 180; // fallback if ffprobe fails
+
+    db.run('INSERT INTO songs (filename, title, artist, duration, file_path, added_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [req.file.filename, title, artist, duration, req.file.path, req.user.userId],
+        function(err) {
+            if (err) {
+                console.error('Error saving song:', err);
+                return res.status(500).json({ error: 'Failed to save song info' });
+            }
+            res.json({
+                id: this.lastID,
+                title,
+                artist,
+                duration,
+                message: 'Song uploaded successfully (fallback metadata)'
+                });
+            }
+        );
     }
 });
 
