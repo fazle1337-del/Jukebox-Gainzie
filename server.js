@@ -656,6 +656,7 @@ function updatePlaylist(songId) {
             }
             
             const voteCount = result.vote_count;
+            console.log(`updatePlaylist called for songId=${songId}, voteCount=${voteCount}`); // Debug log
             
             if (voteCount > 0) {
                 // Add or update in playlist
