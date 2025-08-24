@@ -7,14 +7,13 @@ services:
     ports:
       - "3001:3000"  # Changed to 3001 to avoid conflicts with other services using 3000
     volumes:
-      # Mount your music collection
-      - ./music:/app/music:ro
-      # Persistent data storage
-      - ./data:/app/data
-      # For file uploads
-      - ./uploads:/app/uploads
-      # SQLite database
-      - jukebox_db:/app/database
+      - ./music:/app/music:ro # Mount your music collection as read-only
+      - ./data:/app/data # Persistent data storage
+      - ./uploads:/app/uploads  # For file uploads
+      - jukebox_db:/app/database # Persistent database storage
+      - /run/user/1000/pulse:/run/pulse  # Added for PulseAudio
+    devices:
+      - /dev/snd:/dev/snd                 # Added to allow audio output
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-super-secret-jwt-key-change-this
@@ -23,6 +22,8 @@ services:
       - UPLOAD_PATH=/app/uploads
       - MAX_VOTES_PER_USER=5
       - PLAYLIST_MAX_SIZE=50
+      - PULSE_SERVER=unix:/run/pulse/native  # Added for PulseAudio
+    user: "1000:1000"  # Match host user for PulseAudio permissions
     restart: unless-stopped
     networks:
       - jukebox_network
