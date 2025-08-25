@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Jukebox</title>
-     <link rel="stylesheet" href="player.css">
+    <title>🎵 Jukebox Gainzie</title>
     <style>
         * {
             margin: 0;
@@ -13,10 +12,10 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             color: white;
+            min-height: 100vh;
         }
 
         .container {
@@ -25,142 +24,112 @@
             padding: 20px;
         }
 
-        header {
+        .header {
             text-align: center;
             margin-bottom: 30px;
         }
 
-        h1 {
-            font-size: 3em;
+        .header h1 {
+            font-size: 2.5rem;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .auth-section {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .auth-forms {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .auth-form {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 10px;
-            min-width: 300px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            font-size: 16px;
-        }
-
-        input::placeholder {
-            color: rgba(255,255,255,0.7);
-        }
-
-        button {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin: 5px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        .main-app {
-            display: none;
-        }
-
-        .app-header {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .user-info {
-            font-size: 1.1em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .tabs {
             display: flex;
-            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 5px;
             margin-bottom: 30px;
-            justify-content: center;
+            backdrop-filter: blur(10px);
         }
 
-        .tab-button {
-            background: rgba(255,255,255,0.2);
-            padding: 15px 30px;
-            border-radius: 25px;
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            background: none;
             border: none;
             color: white;
             cursor: pointer;
-            transition: all 0.3s;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
 
-        .tab-button.active {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            transform: scale(1.05);
+        .tab.active {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
         }
 
         .tab-content {
             display: none;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 30px;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        .song-list, .playlist-list {
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 16px;
+        }
+
+        .form-group input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .song-list {
             display: grid;
             gap: 15px;
         }
@@ -172,273 +141,473 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
         }
 
         .song-item:hover {
-            background: rgba(255,255,255,0.2);
             transform: translateY(-2px);
+            background: rgba(255,255,255,0.15);
         }
 
         .song-info {
-            flex-grow: 1;
+            flex: 1;
         }
 
         .song-title {
-            font-size: 1.3em;
+            font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 5px;
         }
 
-        .song-artist {
-            opacity: 0.8;
-            font-size: 1.1em;
+        .song-meta {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
         }
 
-        .vote-section {
+        .song-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .vote-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
+            gap: 5px;
+        }
+
+        .vote-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .vote-btn.voted {
+            background: #ff6b6b;
+            border-color: #ff6b6b;
+        }
+
+        .play-btn {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .play-btn:hover {
+            background: #45a049;
+        }
+
+        .audio-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(20px);
+            padding: 15px 20px;
+            display: none;
+            align-items: center;
             gap: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
         }
 
-        .vote-count {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
+        .audio-player.active {
+            display: flex;
+        }
+
+        .now-playing-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .now-playing-title {
             font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .upload-section {
+        .now-playing-artist {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .progress-container {
+            flex: 2;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ff6b6b;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .time-display {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.8);
+            min-width: 40px;
+        }
+
+        .upload-area {
             border: 2px dashed rgba(255,255,255,0.3);
-            border-radius: 15px;
+            border-radius: 12px;
             padding: 40px;
             text-align: center;
-            transition: all 0.3s;
-        }
-
-        .upload-section:hover {
-            border-color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            transition: all 0.3s ease;
             background: rgba(255,255,255,0.05);
         }
 
-        .file-input {
+        .upload-area:hover {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .upload-area.dragover {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .hidden {
             display: none;
-        }
-
-        .upload-button {
-            background: linear-gradient(45deg, #4834d4, #686de0);
-            font-size: 1.2em;
-            padding: 15px 30px;
-        }
-
-        .now-playing {
-            background: linear-gradient(45deg, #00d2d3, #54a0ff);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .now-playing h3 {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-
-        .error, .success {
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-            text-align: center;
         }
 
         .error {
             background: rgba(255, 0, 0, 0.2);
-            border: 1px solid rgba(255, 0, 0, 0.5);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
         }
 
         .success {
             background: rgba(0, 255, 0, 0.2);
-            border: 1px solid rgba(0, 255, 0, 0.5);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
         }
 
         @media (max-width: 768px) {
-            .auth-forms {
-                flex-direction: column;
-                align-items: center;
+            .container {
+                padding: 10px;
             }
-            
-            .app-header {
+
+            .song-item {
                 flex-direction: column;
-                gap: 15px;
-                text-align: center;
+                gap: 10px;
+                align-items: stretch;
             }
-            
-            .tabs {
-                flex-wrap: wrap;
+
+            .song-actions {
+                justify-content: space-between;
+            }
+
+            .audio-player {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .progress-container {
+                order: -1;
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🎵 Pi Jukebox</h1>
-            <p class="subtitle">Vote for your favorite tunes!</p>
-        </header>
-
-        <!-- Authentication Section -->
-        <div id="authSection" class="auth-section">
-            <div class="auth-forms">
-                <div class="auth-form">
-                    <h3>Login</h3>
-                    <form id="loginForm">
-                        <div class="form-group">
-                            <label for="loginUsername">Username:</label>
-                            <input type="text" id="loginUsername" placeholder="Enter username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="loginPassword">Password:</label>
-                            <input type="password" id="loginPassword" placeholder="Enter password" required>
-                        </div>
-                        <button type="submit">Login</button>
-                    </form>
-                </div>
-
-                <div class="auth-form">
-                    <h3>Register</h3>
-                    <form id="registerForm">
-                        <div class="form-group">
-                            <label for="registerUsername">Username:</label>
-                            <input type="text" id="registerUsername" placeholder="Choose username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="registerPassword">Password:</label>
-                            <input type="password" id="registerPassword" placeholder="Choose password" required>
-                        </div>
-                        <button type="submit">Register</button>
-                    </form>
-                </div>
-            </div>
-            <div id="authMessage"></div>
+        <div class="header">
+            <h1>🎵 Jukebox Gainzie</h1>
+            <p>Collaborative music streaming with Jellyfin-style playback</p>
         </div>
 
-        <!-- Main App -->
-        <div id="mainApp" class="main-app">
-            <div class="app-header">
-                <div class="user-info">
-                    Welcome, <strong id="currentUser"></strong>!
-                </div>
-                <button id="logoutBtn" onclick="logout()">Logout</button>
-            </div>
-
-            <div id="nowPlaying" class="now-playing" style="display: none;">
-                <h3>Now Playing</h3>
-                <div id="currentSong"></div>
-            </div>
-
+        <!-- Authentication Section -->
+        <div id="auth-section">
             <div class="tabs">
-                <button class="tab-button active" onclick="showTab('songs')">All Songs</button>
-                <button class="tab-button" onclick="showTab('playlist')">Current Playlist</button>
-                <button class="tab-button" onclick="showTab('upload')">Upload Music</button>
+                <button class="tab active" onclick="switchAuthTab('login')">Login</button>
+                <button class="tab" onclick="switchAuthTab('register')">Register</button>
+            </div>
+
+            <div id="login-tab" class="tab-content active">
+                <div class="auth-container">
+                    <h2 style="text-align: center; margin-bottom: 20px;">Welcome Back</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-username">Username</label>
+                            <input type="text" id="login-username" name="username" placeholder="Enter your username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" name="password" placeholder="Enter your password" required>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Login</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="register-tab" class="tab-content">
+                <div class="auth-container">
+                    <h2 style="text-align: center; margin-bottom: 20px;">Join the Jukebox</h2>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="register-username">Username</label>
+                            <input type="text" id="register-username" name="username" placeholder="Choose a username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" name="password" placeholder="Choose a password" required>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Register</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Section -->
+        <div id="app-section" class="hidden">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('songs')">All Songs</button>
+                <button class="tab" onclick="switchTab('playlist')">Playlist</button>
+                <button class="tab" onclick="switchTab('upload')">Upload Music</button>
+                <button class="tab" onclick="switchTab('profile')">Profile</button>
             </div>
 
             <!-- Songs Tab -->
-            <div id="songsTab" class="tab-content active">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>All Songs</h2>
-                    <button onclick="rescanMusic()" style="background: linear-gradient(45deg, #4834d4, #686de0);">
-                        🔄 Rescan Music Folder
-                    </button>
+            <div id="songs-tab" class="tab-content active">
+                <div id="songs-list" class="song-list">
+                    <!-- Songs will be loaded here -->
                 </div>
-                <div id="songsList" class="song-list"></div>
             </div>
 
             <!-- Playlist Tab -->
-            <div id="playlistTab" class="tab-content">
-                <h2>Current Playlist</h2>
-                <div id="playlistList" class="playlist-list"></div>
+            <div id="playlist-tab" class="tab-content">
+                <h2 style="margin-bottom: 20px;">Current Playlist (Voted Songs)</h2>
+                <div id="playlist-list" class="song-list">
+                    <!-- Playlist will be loaded here -->
+                </div>
             </div>
 
             <!-- Upload Tab -->
-            <div id="uploadTab" class="tab-content">
-                <h2>Upload New Music</h2>
-                <div class="upload-section">
-                    <p>Upload MP3, WAV, FLAC, M4A, or OGG files</p>
-                    <input type="file" id="fileInput" class="file-input" accept="audio/*" multiple>
-                    <button class="upload-button" onclick="document.getElementById('fileInput').click()">
-                        Choose Files
-                    </button>
+            <div id="upload-tab" class="tab-content">
+                <h2 style="margin-bottom: 20px;">Upload New Music</h2>
+                <div class="upload-area" id="upload-area">
+                    <p style="margin-bottom: 10px;">📁 Drag and drop music files here</p>
+                    <p style="color: rgba(255,255,255,0.7); margin-bottom: 15px;">or</p>
+                    <button class="btn" onclick="document.getElementById('file-input').click()">Choose Files</button>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: rgba(255,255,255,0.6);">
+                        Supported formats: MP3, WAV, FLAC, M4A, OGG
+                    </p>
                 </div>
-                <div id="uploadMessage"></div>
+                <input type="file" id="file-input" multiple accept="audio/*" class="hidden">
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profile-tab" class="tab-content">
+                <div class="auth-container">
+                    <h2 style="margin-bottom: 20px;">Profile</h2>
+                    <p id="user-info" style="margin-bottom: 20px;"></p>
+                    <button class="btn btn-secondary" onclick="logout()" style="width: 100%;">Logout</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        let authToken = localStorage.getItem('authToken');
-        let currentUser = localStorage.getItem('currentUser');
+    <!-- Audio Player -->
+    <div id="audio-player" class="audio-player">
+        <div class="now-playing-info">
+            <div class="now-playing-title" id="current-title">No song playing</div>
+            <div class="now-playing-artist" id="current-artist"></div>
+        </div>
         
+        <div class="player-controls">
+            <button class="control-btn" id="prev-btn" title="Previous">⏮️</button>
+            <button class="control-btn" id="play-pause-btn" title="Play/Pause">▶️</button>
+            <button class="control-btn" id="next-btn" title="Next">⏭️</button>
+            <button class="control-btn" id="stop-btn" title="Stop">⏹️</button>
+        </div>
+
+        <div class="progress-container">
+            <span class="time-display" id="current-time">0:00</span>
+            <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <span class="time-display" id="total-time">0:00</span>
+        </div>
+
+        <audio id="audio-element" preload="metadata"></audio>
+    </div>
+
+    <script>
+        // Global state
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        let songs = [];
+        let playlist = [];
+        let currentSongIndex = -1;
+        let audio = document.getElementById('audio-element');
+
         // Initialize app
-        if (authToken) {
-            showMainApp();
+        if (authToken && currentUser) {
+            showApp();
+        } else {
+            showAuth();
         }
 
-        // Auth functions
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        // Authentication functions
+        function switchAuthTab(tab) {
+            document.querySelectorAll('#auth-section .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('#auth-section .tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            document.querySelector(`#auth-section .tab:nth-child(${tab === 'login' ? '1' : '2'})`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('#app-section .tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('#app-section .tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            const tabMap = { songs: 1, playlist: 2, upload: 3, profile: 4 };
+            document.querySelector(`#app-section .tab:nth-child(${tabMap[tab]})`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+
+            if (tab === 'songs') loadSongs();
+            if (tab === 'playlist') loadPlaylist();
+            if (tab === 'profile') updateProfile();
+        }
+
+        function showAuth() {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('app-section').classList.add('hidden');
+        }
+
+        function showApp() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('app-section').classList.remove('hidden');
+            loadSongs();
+        }
+
+        // API functions
+        async function apiRequest(endpoint, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                }
+            };
+
+            const response = await fetch(`/api${endpoint}`, { ...defaultOptions, ...options });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Request failed');
+            }
+            
+            return response.json();
+        }
+
+        // Authentication handlers
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
+            const formData = new FormData(e.target);
             
             try {
-                const response = await fetch('/api/login', {
+                const response = await apiRequest('/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({
+                        username: formData.get('username'),
+                        password: formData.get('password')
+                    })
                 });
                 
-                const data = await response.json();
+                authToken = response.token;
+                currentUser = response.user;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
-                if (response.ok) {
-                    authToken = data.token;
-                    currentUser = data.username;
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('currentUser', currentUser);
-                    showMainApp();
-                    showMessage('Login successful!', 'success');
-                } else {
-                    showMessage(data.error, 'error');
-                }
+                showApp();
             } catch (error) {
-                showMessage('Login failed. Please try again.', 'error');
+                showMessage(error.message, 'error');
             }
         });
 
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('registerUsername').value;
-            const password = document.getElementById('registerPassword').value;
+            const formData = new FormData(e.target);
             
             try {
-                const response = await fetch('/api/register', {
+                const response = await apiRequest('/register', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({
+                        username: formData.get('username'),
+                        password: formData.get('password')
+                    })
                 });
                 
-                const data = await response.json();
+                authToken = response.token;
+                currentUser = response.user;
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
-                if (response.ok) {
-                    authToken = data.token;
-                    currentUser = data.username;
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('currentUser', currentUser);
-                    showMainApp();
-                    showMessage('Registration successful!', 'success');
-                } else {
-                    showMessage(data.error, 'error');
-                }
+                showApp();
             } catch (error) {
-                showMessage('Registration failed. Please try again.', 'error');
+                showMessage(error.message, 'error');
             }
         });
 
@@ -447,287 +616,249 @@
             currentUser = null;
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
-            document.getElementById('authSection').style.display = 'block';
-            document.getElementById('mainApp').style.display = 'none';
+            showAuth();
         }
 
-        function showMainApp() {
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            document.getElementById('currentUser').textContent = currentUser;
-            loadSongs();
-            loadPlaylist();
-            loadNowPlaying();
-        }
-
-        // Tab functions
-        function showTab(tabName) {
-            const tabs = document.querySelectorAll('.tab-content');
-            const buttons = document.querySelectorAll('.tab-button');
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            buttons.forEach(btn => btn.classList.remove('active'));
-            
-            document.getElementById(tabName + 'Tab').classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'songs') loadSongs();
-            if (tabName === 'playlist') loadPlaylist();
-        }
-
-        // Load songs
+        // Song management
         async function loadSongs() {
             try {
-                const response = await fetch('/api/songs');
-                const songs = await response.json();
-                
-                const songsList = document.getElementById('songsList');
-                songsList.innerHTML = '';
-                
-                songs.forEach(song => {
-                    const songElement = createSongElement(song);
-                    songsList.appendChild(songElement);
-                });
+                songs = await apiRequest('/songs');
+                renderSongs();
             } catch (error) {
-                console.error('Failed to load songs:', error);
+                showMessage('Failed to load songs', 'error');
             }
         }
 
-        // Load playlist
         async function loadPlaylist() {
             try {
-                const response = await fetch('/api/playlist');
-                const playlist = await response.json();
-                
-                const playlistList = document.getElementById('playlistList');
-                playlistList.innerHTML = '';
-                
-                if (playlist.length === 0) {
-                    playlistList.innerHTML = '<p style="text-align: center; opacity: 0.7;">No songs in playlist. Vote for songs to add them!</p>';
-                    return;
-                }
-                
-                playlist.forEach((song, index) => {
-                    const songElement = createPlaylistElement(song, index + 1);
-                    playlistList.appendChild(songElement);
-                });
+                playlist = await apiRequest('/playlist');
+                renderPlaylist();
             } catch (error) {
-                console.error('Failed to load playlist:', error);
+                showMessage('Failed to load playlist', 'error');
             }
         }
 
-        // Load now playing
-        async function loadNowPlaying() {
-            try {
-                const response = await fetch('/api/now-playing');
-                const nowPlaying = await response.json();
-                
-                const nowPlayingDiv = document.getElementById('nowPlaying');
-                const currentSongDiv = document.getElementById('currentSong');
-                
-                if (nowPlaying) {
-                    currentSongDiv.innerHTML = `
-                        <strong>${nowPlaying.title}</strong><br>
-                        <span style="opacity: 0.8;">${nowPlaying.artist}</span>
-                    `;
-                    nowPlayingDiv.style.display = 'block';
-                } else {
-                    nowPlayingDiv.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Failed to load now playing:', error);
-            }
+        function renderSongs() {
+            const container = document.getElementById('songs-list');
+            container.innerHTML = songs.map(song => `
+                <div class="song-item">
+                    <div class="song-info">
+                        <div class="song-title">${song.title || song.filename}</div>
+                        <div class="song-meta">
+                            ${song.artist || 'Unknown Artist'} • ${song.album || 'Unknown Album'}
+                            ${song.duration ? ` • ${formatTime(song.duration)}` : ''}
+                        </div>
+                    </div>
+                    <div class="song-actions">
+                        <button class="play-btn" onclick="playSong(${song.id})">▶️ Play</button>
+                        <button class="vote-btn ${hasVoted(song) ? 'voted' : ''}" onclick="toggleVote(${song.id})">
+                            ${hasVoted(song) ? '❤️' : '🤍'} ${song.vote_count || 0}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // Create song element
-        function createSongElement(song) {
-            const div = document.createElement('div');
-            div.className = 'song-item';
-            
-            const duration = formatDuration(song.duration);
-            
-            div.innerHTML = `
-                <div class="song-info">
-                    <div class="song-title">${song.title}</div>
-                    <div class="song-artist">${song.artist || 'Unknown Artist'} • ${duration}</div>
-                </div>
-                <div class="vote-section">
-                    <div class="vote-count">${song.vote_count} votes</div>
-                    <button onclick="toggleVote(${song.id}, this)" 
-                            data-voted="${song.user_voted || false}">
-                        ${song.user_voted ? '❤️ Voted' : '🤍 Vote'}
-                    </button>
-                </div>
-            `;
-            
-            return div;
-        }
-
-        // Create playlist element
-        function createPlaylistElement(song, position) {
-            const div = document.createElement('div');
-            div.className = 'song-item';
-            
-            const duration = formatDuration(song.duration);
-            
-            div.innerHTML = `
-                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px; font-weight: bold;">
-                    ${position}
-                </div>
-                <div class="song-info">
-                    <div class="song-title">${song.title}</div>
-                    <div class="song-artist">${song.artist || 'Unknown Artist'} • ${duration}</div>
-                </div>
-                <div class="vote-section">
-                    <div class="vote-count">${song.vote_count} votes</div>
-                </div>
-            `;
-            
-            return div;
-        }
-
-        // Toggle vote
-        async function toggleVote(songId, button) {
-            if (!authToken) {
-                showMessage('Please login to vote', 'error');
+        function renderPlaylist() {
+            const container = document.getElementById('playlist-list');
+            if (playlist.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.6);">No songs in playlist. Vote for songs to add them!</p>';
                 return;
             }
 
-            const isVoted = button.dataset.voted === 'true';
-            
+            container.innerHTML = playlist.map((song, index) => `
+                <div class="song-item">
+                    <div class="song-info">
+                        <div class="song-title">#${index + 1} ${song.title || song.filename}</div>
+                        <div class="song-meta">
+                            ${song.artist || 'Unknown Artist'} • ${song.album || 'Unknown Album'}
+                            • ${song.vote_count} votes
+                        </div>
+                    </div>
+                    <div class="song-actions">
+                        <button class="play-btn" onclick="playSong(${song.id})">▶️ Play</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function hasVoted(song) {
+            return song.voters && currentUser && song.voters.includes(currentUser.username);
+        }
+
+        async function toggleVote(songId) {
             try {
-                const response = await fetch(isVoted ? `/api/vote/${songId}` : '/api/vote', {
-                    method: isVoted ? 'DELETE' : 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: isVoted ? null : JSON.stringify({ songId })
-                });
+                const song = songs.find(s => s.id === songId);
+                const voted = hasVoted(song);
                 
-                if (response.ok) {
-                    button.dataset.voted = !isVoted;
-                    button.textContent = isVoted ? '🤍 Vote' : '❤️ Voted';
-                    
-                    // Refresh the current tab
-                    const activeTab = document.querySelector('.tab-button.active').textContent.toLowerCase().replace(' ', '');
-                    if (activeTab === 'allsongs') loadSongs();
-                    if (activeTab === 'currentplaylist') loadPlaylist();
-                    
-                    showMessage(isVoted ? 'Vote removed!' : 'Vote added!', 'success', 2000);
+                if (voted) {
+                    await apiRequest(`/vote/${songId}`, { method: 'DELETE' });
                 } else {
-                    const data = await response.json();
-                    showMessage(data.error, 'error');
+                    await apiRequest('/vote', {
+                        method: 'POST',
+                        body: JSON.stringify({ songId })
+                    });
                 }
+                
+                loadSongs(); // Refresh to show updated vote counts
             } catch (error) {
-                showMessage('Vote failed. Please try again.', 'error');
+                showMessage(error.message, 'error');
             }
         }
 
-        // File upload
-        document.getElementById('fileInput').addEventListener('change', async (e) => {
-            const files = e.target.files;
-            if (files.length === 0) return;
+        // Audio playback functions
+        function playSong(songId) {
+            const song = songs.find(s => s.id === songId) || playlist.find(s => s.id === songId);
+            if (!song) return;
+
+            audio.src = `/api/audio/${songId}`;
+            audio.load();
             
-            const uploadMessage = document.getElementById('uploadMessage');
-            uploadMessage.innerHTML = '<p>Uploading...</p>';
+            document.getElementById('current-title').textContent = song.title || song.filename;
+            document.getElementById('current-artist').textContent = song.artist || 'Unknown Artist';
             
-            for (let file of files) {
+            document.getElementById('audio-player').classList.add('active');
+            
+            audio.play().catch(error => {
+                console.error('Failed to play audio:', error);
+                // Try transcoded version if direct playback fails
+                audio.src = `/api/audio/${songId}/transcode`;
+                audio.load();
+                audio.play().catch(e => showMessage('Failed to play audio', 'error'));
+            });
+        }
+
+        // Audio player controls
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        });
+
+        document.getElementById('stop-btn').addEventListener('click', () => {
+            audio.pause();
+            audio.currentTime = 0;
+            document.getElementById('audio-player').classList.remove('active');
+        });
+
+        // Audio event listeners
+        audio.addEventListener('loadedmetadata', () => {
+            document.getElementById('total-time').textContent = formatTime(audio.duration);
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            const progress = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+            document.getElementById('current-time').textContent = formatTime(audio.currentTime);
+        });
+
+        audio.addEventListener('play', () => {
+            document.getElementById('play-pause-btn').textContent = '⏸️';
+        });
+
+        audio.addEventListener('pause', () => {
+            document.getElementById('play-pause-btn').textContent = '▶️';
+        });
+
+        // Progress bar seeking
+        document.getElementById('progress-bar').addEventListener('click', (e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const progress = clickX / rect.width;
+            audio.currentTime = progress * audio.duration;
+        });
+
+        // File upload handling
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        async function handleFiles(files) {
+            for (const file of files) {
+                if (!file.type.startsWith('audio/')) {
+                    showMessage(`${file.name} is not an audio file`, 'error');
+                    continue;
+                }
+
                 const formData = new FormData();
                 formData.append('music', file);
-                
+
                 try {
-                    const response = await fetch('/api/upload', {
+                    await fetch('/api/upload', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${authToken}`
                         },
                         body: formData
                     });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        showMessage(`${data.title} uploaded successfully!`, 'success');
-                    } else {
-                        showMessage(`Failed to upload ${file.name}: ${data.error}`, 'error');
-                    }
+
+                    showMessage(`${file.name} uploaded successfully!`, 'success');
                 } catch (error) {
                     showMessage(`Failed to upload ${file.name}`, 'error');
                 }
             }
-            
-            // Clear the file input
-            e.target.value = '';
+
+            // Refresh songs list
             loadSongs();
-        });
+            fileInput.value = '';
+        }
 
         // Utility functions
-        function formatDuration(seconds) {
-            if (!seconds) return '0:00';
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
             const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
+            const secs = Math.floor(seconds % 60);
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
-        function showMessage(message, type, duration = 5000) {
-            const messageDiv = document.getElementById('authMessage');
-            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        function showMessage(message, type) {
+            const messageEl = document.createElement('div');
+            messageEl.className = type;
+            messageEl.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(messageEl, container.firstChild);
             
             setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, duration);
+                messageEl.remove();
+            }, 5000);
         }
 
-        // Rescan music directory
-        async function rescanMusic() {
-            if (!authToken) {
-                showMessage('Please login to rescan music', 'error');
-                return;
-            }
-
-            const button = event.target;
-            const originalText = button.textContent;
-            button.textContent = '🔄 Scanning...';
-            button.disabled = true;
-
-            try {
-                const response = await fetch('/api/rescan', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showMessage('Music directory rescanned successfully!', 'success');
-                    loadSongs(); // Refresh the song list
-                } else {
-                    showMessage(data.error || 'Rescan failed', 'error');
-                }
-            } catch (error) {
-                showMessage('Rescan failed. Please try again.', 'error');
-            } finally {
-                button.textContent = originalText;
-                button.disabled = false;
+        function updateProfile() {
+            if (currentUser) {
+                document.getElementById('user-info').textContent = `Logged in as: ${currentUser.username}`;
             }
         }
 
-        // Auto-refresh every 30 seconds
+        // Auto-refresh songs and playlist every 30 seconds
         setInterval(() => {
             if (authToken) {
-                loadNowPlaying();
-                const activeTab = document.querySelector('.tab-button.active');
-                if (activeTab) {
-                    const tabName = activeTab.textContent.toLowerCase().replace(' ', '');
-                    if (tabName === 'allsongs') loadSongs();
-                    if (tabName === 'currentplaylist') loadPlaylist();
+                loadSongs();
+                if (document.getElementById('playlist-tab').classList.contains('active')) {
+                    loadPlaylist();
                 }
             }
         }, 30000);
     </script>
-    <script src="player.js"></script>
 </body>
 </html>

@@ -4,57 +4,37 @@ services:
   jukebox:
     build: .
     container_name: pi_jukebox
+    restart: unless-stopped
     ports:
-      - "3001:3000"  # Changed to 3001 to avoid conflicts with other services using 3000
+      - "3001:3000"
     volumes:
-      - ./music:/app/music:ro # Mount your music collection as read-only
-      - ./data:/app/data # Persistent data storage
-      - ./uploads:/app/uploads  # For file uploads
-      - jukebox_db:/app/database # Persistent database storage
-      - /run/user/1000/pulse:/run/pulse  # Added for PulseAudio
-    devices:
-      - /dev/snd:/dev/snd                 # Added to allow audio output
+      # Mount your music collection (read-only)
+      - ./music:/app/music:ro
+      # Persistent data directories
+      - ./database:/app/database
+      - ./uploads:/app/uploads
+      # Optional: custom configuration
+      - ./.env:/app/.env:ro
     environment:
       - NODE_ENV=production
-      - JWT_SECRET=your-super-secret-jwt-key-change-this
-      - DB_PATH=/app/database/jukebox.db
-      - MUSIC_PATH=/app/music
-      - UPLOAD_PATH=/app/uploads
-      - MAX_VOTES_PER_USER=5
-      - PLAYLIST_MAX_SIZE=50
-      - PULSE_SERVER=unix:/run/pulse/native  # Added for PulseAudio
-    user: "1000:1000"  # Match host user for PulseAudio permissions
-    restart: unless-stopped
-    networks:
-      - jukebox_network
-    # For Pi5 - limit resources if needed
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-this-to-something-secure}
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Resource limits (adjust based on your Pi's capabilities)
     deploy:
       resources:
         limits:
           memory: 512M
         reservations:
           memory: 256M
-
-  # Optional: Add a reverse proxy for HTTPS (disabled by default)
-  # Uncomment the nginx section below if you want reverse proxy features
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: jukebox_proxy
-  #   ports:
-  #     - "3002:80"      # Using port 3002 to avoid conflicts
-  #     - "3003:443"     # Using port 3003 for HTTPS
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./ssl:/etc/nginx/ssl:ro
-  #   depends_on:
-  #     - jukebox
-  #   networks:
-  #     - jukebox_network
-  #   restart: unless-stopped
-
-volumes:
-  jukebox_db:
-
-networks:
-  jukebox_network:
-    driver: bridge
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

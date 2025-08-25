@@ -1,41 +1,41 @@
-FROM node:18-bullseye
+# Use Node.js 18 LTS as base image
+FROM node:18-bullseye-slim
 
-WORKDIR /app
-
-# Install audio players and dependencies
+# Install system dependencies including FFmpeg
 RUN apt-get update && apt-get install -y \
-    mpg123 \
-    sox \
-    libsox-fmt-all \
     ffmpeg \
-    alsa-utils \
-    pulseaudio \
+    ffprobe \
+    sqlite3 \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# If you're running on a Raspberry Pi, you might also need:
-# RUN apt-get install -y libasound2-dev
+# Create app directory
+WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install Node.js dependencies
+RUN npm ci --only=production
 
-# Copy application code
+# Copy application files
 COPY . .
 
-# Create directories for music and data
-RUN mkdir -p /app/music /app/data /app/uploads
+# Create required directories
+RUN mkdir -p music uploads database public
 
-# Build the app (if using a build step)
-RUN npm run build || true
-
-# Expose port
-EXPOSE 3000
+# Set proper permissions
+RUN chown -R node:node /app
+USER node
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Run the application
+# Expose port
+EXPOSE 3000
+
+# Start the application
 CMD ["npm", "start"]
