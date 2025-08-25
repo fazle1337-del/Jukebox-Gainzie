@@ -4,11 +4,11 @@ FROM node:18-bullseye-slim
 # Install system dependencies including FFmpeg
 RUN apt-get update && apt-get install -y \
     ffmpeg \
-    ffprobe \
     sqlite3 \
     python3 \
     make \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
