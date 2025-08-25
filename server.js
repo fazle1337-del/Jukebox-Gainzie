@@ -15,6 +15,38 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware
 app.use(express.json());
+
+// CORS middleware (in case you're accessing from different origins)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// API routes first (before static files)
+// Debug endpoint
+app.get('/api/debug', (req, res) => {
+  console.log('Debug endpoint called');
+  res.json({ 
+    message: 'API is working',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  console.log('Health check called');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Static files AFTER API routes
 app.use(express.static('public'));
 
 // Initialize SQLite database
@@ -308,24 +340,9 @@ app.get('/api/audio/:songId/transcode', (req, res) => {
   });
 });
 
-// API Routes
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Debug endpoint
-app.get('/api/debug', (req, res) => {
-  res.json({ 
-    message: 'API is working',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
-  });
-});
-
 // Register user
 app.post('/api/register', async (req, res) => {
+  console.log('Register endpoint called with:', req.body);
   const { username, password } = req.body;
   
   if (!username || !password) {
@@ -356,6 +373,7 @@ app.post('/api/register', async (req, res) => {
 
 // Login user
 app.post('/api/login', (req, res) => {
+  console.log('Login endpoint called with:', req.body);
   const { username, password } = req.body;
   
   if (!username || !password) {
