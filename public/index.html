@@ -567,7 +567,11 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             
+            console.log('Attempting login...');
+            
             try {
+                showMessage('Logging in...', 'success');
+                
                 const response = await apiRequest('/login', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -576,13 +580,17 @@
                     })
                 });
                 
+                console.log('Login successful:', response);
+                
                 authToken = response.token;
                 currentUser = response.user;
                 localStorage.setItem('authToken', authToken);
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
+                showMessage('Login successful!', 'success');
                 showApp();
             } catch (error) {
+                console.error('Login error:', error);
                 showMessage(error.message, 'error');
             }
         });
@@ -591,7 +599,11 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             
+            console.log('Attempting registration...');
+            
             try {
+                showMessage('Creating account...', 'success');
+                
                 const response = await apiRequest('/register', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -600,13 +612,17 @@
                     })
                 });
                 
+                console.log('Registration successful:', response);
+                
                 authToken = response.token;
                 currentUser = response.user;
                 localStorage.setItem('authToken', authToken);
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
+                showMessage('Account created successfully!', 'success');
                 showApp();
             } catch (error) {
+                console.error('Registration error:', error);
                 showMessage(error.message, 'error');
             }
         });

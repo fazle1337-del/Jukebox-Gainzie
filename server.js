@@ -315,6 +315,15 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Debug endpoint
+app.get('/api/debug', (req, res) => {
+  res.json({ 
+    message: 'API is working',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
+
 // Register user
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
