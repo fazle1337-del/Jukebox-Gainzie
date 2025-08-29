@@ -613,7 +613,7 @@ app.get('/api/now-playing', (req, res) => {
 });
 
 // Start playing next song
-app.post('/api/play-next', authenticateJWT, (req, res) => {
+app.post('/api/play-next', authenticateJWT, (req, res) => { //red curly bracket
   playNextSong((song) => {    
     if (!song) {
       return res.json({ error: 'No songs in playlist' });
@@ -628,10 +628,10 @@ app.post('/api/play-next', authenticateJWT, (req, res) => {
 
 
 // Pause/Resume playback
-app.post('/api/pause', authenticateJWT, (req, res) => {
+app.post('/api/pause', authenticateJWT, (req, res) => { //red curly bracket
   if (!currentlyPlaying.songId) {
     return res.status(400).json({ error: 'Nothing currently playing' });
-
+  }
   const now = Date.now();
 
   if (currentlyPlaying.isPlaying) {
