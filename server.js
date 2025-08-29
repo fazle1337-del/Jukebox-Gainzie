@@ -48,8 +48,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // Create tables
 db.serialize(() => {
   // Users table
+  db.run(`DROP TABLE IF EXISTS users`);
   db.run(`
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       email TEXT,
