@@ -26,6 +26,8 @@ let currentlyPlaying = {
   pausedAt: null
 };
 
+let playTimeout;
+
 // Database setup
 const dbPath = './database/jukebox.db';
 
@@ -214,6 +216,54 @@ function scanMusicFiles() {
     });
   }
 }
+
+// Function to play next song in playlist
+function playNextSong(callback) {
+  const query = `
+    SELECT s.* FROM songs s
+    LEFT JOIN votes v ON s.id = v.song_id
+    GROUP BY s.id
+    HAVING COUNT(v.id) > 0
+    ORDER BY COUNT(v.id) DESC, s.id ASC
+    LIMIT 1
+  `;
+
+  db.get(query, [], (err, song) => {
+    if (err) {
+      console.error('Database error:', err);
+      return callback(null);
+    }
+
+    if (!song) {
+      currentlyPlaying = {
+        songId: null,
+        startTime: null,
+        duration: null,
+        isPlaying: false,
+        pausedAt: null
+      };
+      return callback(null);
+    }
+
+    currentlyPlaying = {
+      songId: song.id,
+      startTime: Date.now(),
+      duration: song.duration,
+      isPlaying: true,
+      pausedAt: null
+    };
+
+    callback(song);
+
+    // Set timeout for next song
+    if (song.duration) {
+      playTimeout = setTimeout(() => {
+        playNextSong(() => {});
+      }, song.duration * 1000);
+    }
+  });
+}
+
 
 // API Routes
 
@@ -564,33 +614,10 @@ app.get('/api/now-playing', (req, res) => {
 
 // Start playing next song
 app.post('/api/play-next', authenticateJWT, (req, res) => {
-  const query = `
-    SELECT s.* FROM songs s 
-    LEFT JOIN votes v ON s.id = v.song_id 
-    GROUP BY s.id
-    HAVING COUNT(v.id) > 0
-    ORDER BY COUNT(v.id) DESC, s.id ASC
-    LIMIT 1
-  `;
-  
-  db.get(query, [], (err, song) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
+  playNextSong((song) => {    
     if (!song) {
       return res.json({ error: 'No songs in playlist' });
     }
-    
-    // Update currently playing
-    currentlyPlaying = {
-      songId: song.id,
-      startTime: Date.now(),
-      duration: song.duration,
-      isPlaying: true,
-      pausedAt: null
-    };
     
     res.json({
       message: 'Now playing',
@@ -598,20 +625,23 @@ app.post('/api/play-next', authenticateJWT, (req, res) => {
       streamUrl: `/api/stream/${song.filename}`
     });
   });
-});
+
 
 // Pause/Resume playback
 app.post('/api/pause', authenticateJWT, (req, res) => {
   if (!currentlyPlaying.songId) {
     return res.status(400).json({ error: 'Nothing currently playing' });
-  }
-  
+
   const now = Date.now();
-  
+
   if (currentlyPlaying.isPlaying) {
     // Pause
     currentlyPlaying.isPlaying = false;
     currentlyPlaying.pausedAt = now;
+    if (playTimeout) {
+      clearTimeout(playTimeout);
+      playTimeout = null;
+    }
   } else {
     // Resume
     currentlyPlaying.isPlaying = true;
@@ -620,6 +650,17 @@ app.post('/api/pause', authenticateJWT, (req, res) => {
       currentlyPlaying.startTime = now - pauseDuration;
     }
     currentlyPlaying.pausedAt = null;
+
+    // Set timeout for remaining time 
+    if (currentlyPlaying.duration) {
+      const elapsed = (now - currentlyPlaying.startTime) / 1000;
+      const remaining = (currentlyPlaying.duration - elapsed) * 1000;
+      if (remaining > 0) {
+        playTimeout = setTimeout(() => {
+          playNextSong(() => {});
+        }, remaining);
+      }
+    }
   }
   
   res.json({ 
@@ -633,9 +674,15 @@ app.post('/api/skip', authenticateJWT, (req, res) => {
   if (!currentlyPlaying.songId) {
     return res.json({ error: 'Nothing currently playing' });
   }
-  
+
   const songId = currentlyPlaying.songId;
-  
+
+  //Clear timeout
+  if (playTimeout) {
+    clearTimeout(playTimeout);
+    playTimeout = null;
+  }
+
   // Remove all votes for current song
   db.run('DELETE FROM votes WHERE song_id = ?', [songId], (err) => {
     if (err) {
@@ -651,7 +698,7 @@ app.post('/api/skip', authenticateJWT, (req, res) => {
       isPlaying: false,
       pausedAt: null
     };
-    
+
     res.json({ message: 'Song skipped, votes removed' });
   });
 });
@@ -661,16 +708,22 @@ app.post('/api/song-finished', authenticateJWT, (req, res) => {
   if (!currentlyPlaying.songId) {
     return res.json({ error: 'Nothing currently playing' });
   }
-  
+
   const songId = currentlyPlaying.songId;
-  
+
+  // Clear timeout
+  if (playTimeout) {
+    clearTimeout(playTimeout);
+    playTimeout = null;
+  }
+
   // Remove all votes for finished song
   db.run('DELETE FROM votes WHERE song_id = ?', [songId], (err) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    
+  
     // Clear current playing
     currentlyPlaying = {
       songId: null,
@@ -679,7 +732,7 @@ app.post('/api/song-finished', authenticateJWT, (req, res) => {
       isPlaying: false,
       pausedAt: null
     };
-    
+ 
     res.json({ message: 'Song finished, votes removed' });
   });
 });
