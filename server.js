@@ -60,8 +60,9 @@ db.serialize(() => {
   `);
 
   // Songs table
+  db.run(`DROP TABLE IF EXISTS songs`); 
   db.run(`
-    CREATE TABLE IF NOT EXISTS songs (
+    CREATE TABLE songs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       filename TEXT UNIQUE NOT NULL,
       title TEXT NOT NULL,
@@ -76,8 +77,9 @@ db.serialize(() => {
   `);
 
   // Votes table
+  db.run(`DROP TABLE IF EXISTS votes`); 
   db.run(`
-    CREATE TABLE IF NOT EXISTS votes (
+    CREATE TABLE votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       song_id INTEGER NOT NULL,
