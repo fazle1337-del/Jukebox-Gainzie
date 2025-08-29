@@ -3,729 +3,608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Jukebox</title>
+    <title>Jukebox Player - Add this to your existing HTML</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* Add these styles to your existing CSS */
+        .music-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             color: white;
+            padding: 20px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            border-top: 3px solid #4f46e5;
         }
 
-        .container {
+        .player-content {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .auth-section {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .auth-forms {
             display: flex;
-            gap: 30px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .auth-form {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 10px;
-            min-width: 300px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            font-size: 16px;
-        }
-
-        input::placeholder {
-            color: rgba(255,255,255,0.7);
-        }
-
-        button {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin: 5px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-
-        .main-app {
-            display: none;
-        }
-
-        .app-header {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-
-        .user-info {
-            font-size: 1.1em;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            justify-content: center;
-        }
-
-        .tab-button {
-            background: rgba(255,255,255,0.2);
-            padding: 15px 30px;
-            border-radius: 25px;
-            border: none;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .tab-button.active {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            transform: scale(1.05);
-        }
-
-        .tab-content {
-            display: none;
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 30px;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .song-list, .playlist-list {
-            display: grid;
-            gap: 15px;
-        }
-
-        .song-item {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s;
-        }
-
-        .song-item:hover {
-            background: rgba(255,255,255,0.2);
-            transform: translateY(-2px);
+            gap: 20px;
         }
 
         .song-info {
-            flex-grow: 1;
+            flex: 1;
+            min-width: 0;
         }
 
         .song-title {
-            font-size: 1.3em;
-            font-weight: 600;
-            margin-bottom: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .song-artist {
+            font-size: 14px;
             opacity: 0.8;
-            font-size: 1.1em;
+            margin: 4px 0 0 0;
         }
 
-        .vote-section {
+        .progress-container {
+            flex: 2;
             display: flex;
             align-items: center;
             gap: 15px;
         }
 
-        .vote-count {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
-
-        .upload-section {
-            border: 2px dashed rgba(255,255,255,0.3);
-            border-radius: 15px;
-            padding: 40px;
+        .time-display {
+            font-size: 14px;
+            min-width: 45px;
             text-align: center;
-            transition: all 0.3s;
         }
 
-        .upload-section:hover {
-            border-color: rgba(255,255,255,0.6);
-            background: rgba(255,255,255,0.05);
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            position: relative;
+            cursor: pointer;
         }
 
-        .file-input {
+        .progress-fill {
+            height: 100%;
+            background: white;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .play-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #4f46e5;
+            font-size: 18px;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .player-status {
+            position: absolute;
+            top: -40px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
             display: none;
         }
 
-        .upload-button {
-            background: linear-gradient(45deg, #4834d4, #686de0);
-            font-size: 1.2em;
-            padding: 15px 30px;
+        .player-status.show {
+            display: block;
         }
 
-        .now-playing {
-            background: linear-gradient(45deg, #00d2d3, #54a0ff);
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
+        .playlist-indicator {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .no-player {
             text-align: center;
+            padding: 40px 20px;
+            opacity: 0.7;
         }
 
-        .now-playing h3 {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-
-        .error, .success {
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-            text-align: center;
-        }
-
-        .error {
-            background: rgba(255, 0, 0, 0.2);
-            border: 1px solid rgba(255, 0, 0, 0.5);
-        }
-
-        .success {
-            background: rgba(0, 255, 0, 0.2);
-            border: 1px solid rgba(0, 255, 0, 0.5);
-        }
-
+        /* Responsive design */
         @media (max-width: 768px) {
-            .auth-forms {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .app-header {
+            .player-content {
                 flex-direction: column;
                 gap: 15px;
+                align-items: stretch;
+            }
+
+            .progress-container {
+                order: -1;
+            }
+
+            .song-info {
                 text-align: center;
             }
-            
-            .tabs {
-                flex-wrap: wrap;
+
+            .player-controls {
+                justify-content: center;
+            }
+
+            .volume-container {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🎵 Pi Jukebox</h1>
-            <p class="subtitle">Vote for your favorite tunes!</p>
-        </header>
-
-        <!-- Authentication Section -->
-        <div id="authSection" class="auth-section">
-            <div class="auth-forms">
-                <div class="auth-form">
-                    <h3>Login</h3>
-                    <form id="loginForm">
-                        <div class="form-group">
-                            <label for="loginUsername">Username:</label>
-                            <input type="text" id="loginUsername" placeholder="Enter username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="loginPassword">Password:</label>
-                            <input type="password" id="loginPassword" placeholder="Enter password" required>
-                        </div>
-                        <button type="submit">Login</button>
-                    </form>
+    <!-- Add this music player component to your existing index.html -->
+    <div id="musicPlayer" class="music-player" style="display: none;">
+        <div class="player-status" id="playerStatus"></div>
+        <div class="player-content">
+            <div class="song-info">
+                <h3 class="song-title" id="currentTitle">No song playing</h3>
+                <p class="song-artist" id="currentArtist"></p>
+                <p class="playlist-indicator" id="playlistIndicator"></p>
+            </div>
+            
+            <div class="progress-container">
+                <span class="time-display" id="currentTime">0:00</span>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
-
-                <div class="auth-form">
-                    <h3>Register</h3>
-                    <form id="registerForm">
-                        <div class="form-group">
-                            <label for="registerUsername">Username:</label>
-                            <input type="text" id="registerUsername" placeholder="Choose username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="registerPassword">Password:</label>
-                            <input type="password" id="registerPassword" placeholder="Choose password" required>
-                        </div>
-                        <button type="submit">Register</button>
-                    </form>
+                <span class="time-display" id="remainingTime">0:00</span>
+            </div>
+            
+            <div class="player-controls">
+                <button class="control-btn" id="skipBtn" title="Skip Song">⏭️</button>
+                <button class="control-btn play-btn" id="playPauseBtn" title="Play/Pause">▶️</button>
+                <button class="control-btn" id="nextBtn" title="Play Next">⏯️</button>
+                
+                <div class="volume-container">
+                    <span>🔊</span>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="0.7">
                 </div>
-            </div>
-            <div id="authMessage"></div>
-        </div>
-
-        <!-- Main App -->
-        <div id="mainApp" class="main-app">
-            <div class="app-header">
-                <div class="user-info">
-                    Welcome, <strong id="currentUser"></strong>!
-                </div>
-                <button id="logoutBtn" onclick="logout()">Logout</button>
-            </div>
-
-            <div id="nowPlaying" class="now-playing" style="display: none;">
-                <h3>Now Playing</h3>
-                <div id="currentSong"></div>
-            </div>
-
-            <div class="tabs">
-                <button class="tab-button active" onclick="showTab('songs')">All Songs</button>
-                <button class="tab-button" onclick="showTab('playlist')">Current Playlist</button>
-                <button class="tab-button" onclick="showTab('upload')">Upload Music</button>
-            </div>
-
-            <!-- Songs Tab -->
-            <div id="songsTab" class="tab-content active">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2>All Songs</h2>
-                    <button onclick="rescanMusic()" style="background: linear-gradient(45deg, #4834d4, #686de0);">
-                        🔄 Rescan Music Folder
-                    </button>
-                </div>
-                <div id="songsList" class="song-list"></div>
-            </div>
-
-            <!-- Playlist Tab -->
-            <div id="playlistTab" class="tab-content">
-                <h2>Current Playlist</h2>
-                <div id="playlistList" class="playlist-list"></div>
-            </div>
-
-            <!-- Upload Tab -->
-            <div id="uploadTab" class="tab-content">
-                <h2>Upload New Music</h2>
-                <div class="upload-section">
-                    <p>Upload MP3, WAV, FLAC, M4A, or OGG files</p>
-                    <input type="file" id="fileInput" class="file-input" accept="audio/*" multiple>
-                    <button class="upload-button" onclick="document.getElementById('fileInput').click()">
-                        Choose Files
-                    </button>
-                </div>
-                <div id="uploadMessage"></div>
             </div>
         </div>
+        
+        <!-- Hidden audio element -->
+        <audio id="audioElement" preload="metadata"></audio>
     </div>
 
     <script>
-        let authToken = localStorage.getItem('authToken');
-        let currentUser = localStorage.getItem('currentUser');
-        
-        // Initialize app
-        if (authToken) {
-            showMainApp();
-        }
+        // Add this JavaScript to your existing script section
+        class JukeboxPlayer {
+            constructor() {
+                this.audioElement = document.getElementById('audioElement');
+                this.currentSong = null;
+                this.isPlaying = false;
+                this.updateInterval = null;
+                this.checkInterval = null;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.startPeriodicUpdates();
+            }
 
-        // Auth functions
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+            initializeElements() {
+                this.playerElement = document.getElementById('musicPlayer');
+                this.titleElement = document.getElementById('currentTitle');
+                this.artistElement = document.getElementById('currentArtist');
+                this.playlistIndicator = document.getElementById('playlistIndicator');
+                this.currentTimeElement = document.getElementById('currentTime');
+                this.remainingTimeElement = document.getElementById('remainingTime');
+                this.progressBar = document.getElementById('progressBar');
+                this.progressFill = document.getElementById('progressFill');
+                this.playPauseBtn = document.getElementById('playPauseBtn');
+                this.skipBtn = document.getElementById('skipBtn');
+                this.nextBtn = document.getElementById('nextBtn');
+                this.volumeSlider = document.getElementById('volumeSlider');
+                this.statusElement = document.getElementById('playerStatus');
+            }
+
+            setupEventListeners() {
+                // Audio element events
+                this.audioElement.addEventListener('loadedmetadata', () => {
+                    console.log('Audio metadata loaded');
                 });
                 
-                const data = await response.json();
-                
-                if (response.ok) {
-                    authToken = data.token;
-                    currentUser = data.username;
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('currentUser', currentUser);
-                    showMainApp();
-                    showMessage('Login successful!', 'success');
-                } else {
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Login failed. Please try again.', 'error');
-            }
-        });
-
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('registerUsername').value;
-            const password = document.getElementById('registerPassword').value;
-            
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                this.audioElement.addEventListener('canplay', () => {
+                    if (this.isPlaying) {
+                        this.audioElement.play().catch(e => console.error('Play error:', e));
+                    }
                 });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    authToken = data.token;
-                    currentUser = data.username;
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('currentUser', currentUser);
-                    showMainApp();
-                    showMessage('Registration successful!', 'success');
-                } else {
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Registration failed. Please try again.', 'error');
-            }
-        });
 
-        function logout() {
-            authToken = null;
-            currentUser = null;
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
-            document.getElementById('authSection').style.display = 'block';
-            document.getElementById('mainApp').style.display = 'none';
-        }
-
-        function showMainApp() {
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'block';
-            document.getElementById('currentUser').textContent = currentUser;
-            loadSongs();
-            loadPlaylist();
-            loadNowPlaying();
-        }
-
-        // Tab functions
-        function showTab(tabName) {
-            const tabs = document.querySelectorAll('.tab-content');
-            const buttons = document.querySelectorAll('.tab-button');
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            buttons.forEach(btn => btn.classList.remove('active'));
-            
-            document.getElementById(tabName + 'Tab').classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'songs') loadSongs();
-            if (tabName === 'playlist') loadPlaylist();
-        }
-
-        // Load songs
-        async function loadSongs() {
-            try {
-                const response = await fetch('/api/songs');
-                const songs = await response.json();
-                
-                const songsList = document.getElementById('songsList');
-                songsList.innerHTML = '';
-                
-                songs.forEach(song => {
-                    const songElement = createSongElement(song);
-                    songsList.appendChild(songElement);
+                this.audioElement.addEventListener('ended', () => {
+                    this.onSongEnded();
                 });
-            } catch (error) {
-                console.error('Failed to load songs:', error);
-            }
-        }
 
-        // Load playlist
-        async function loadPlaylist() {
-            try {
-                const response = await fetch('/api/playlist');
-                const playlist = await response.json();
-                
-                const playlistList = document.getElementById('playlistList');
-                playlistList.innerHTML = '';
-                
-                if (playlist.length === 0) {
-                    playlistList.innerHTML = '<p style="text-align: center; opacity: 0.7;">No songs in playlist. Vote for songs to add them!</p>';
+                this.audioElement.addEventListener('error', (e) => {
+                    console.error('Audio error:', e);
+                    this.showStatus('Audio error occurred', 'error');
+                });
+
+                // Control button events
+                this.playPauseBtn.addEventListener('click', () => {
+                    this.togglePlayPause();
+                });
+
+                this.skipBtn.addEventListener('click', () => {
+                    this.skipSong();
+                });
+
+                this.nextBtn.addEventListener('click', () => {
+                    this.playNext();
+                });
+
+                // Volume control
+                this.volumeSlider.addEventListener('input', (e) => {
+                    this.audioElement.volume = e.target.value;
+                });
+
+                // Progress bar seeking
+                this.progressBar.addEventListener('click', (e) => {
+                    if (!this.currentSong) return;
+                    
+                    const rect = this.progressBar.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percentage = clickX / rect.width;
+                    const newTime = percentage * this.audioElement.duration;
+                    
+                    if (!isNaN(newTime)) {
+                        this.audioElement.currentTime = newTime;
+                    }
+                });
+
+                // Set initial volume
+                this.audioElement.volume = this.volumeSlider.value;
+            }
+
+            async togglePlayPause() {
+                if (!this.currentSong) {
+                    await this.playNext();
                     return;
                 }
-                
-                playlist.forEach((song, index) => {
-                    const songElement = createPlaylistElement(song, index + 1);
-                    playlistList.appendChild(songElement);
-                });
-            } catch (error) {
-                console.error('Failed to load playlist:', error);
-            }
-        }
 
-        // Load now playing
-        async function loadNowPlaying() {
-            try {
-                const response = await fetch('/api/now-playing');
-                const nowPlaying = await response.json();
-                
-                const nowPlayingDiv = document.getElementById('nowPlaying');
-                const currentSongDiv = document.getElementById('currentSong');
-                
-                if (nowPlaying) {
-                    currentSongDiv.innerHTML = `
-                        <strong>${nowPlaying.title}</strong><br>
-                        <span style="opacity: 0.8;">${nowPlaying.artist}</span>
-                    `;
-                    nowPlayingDiv.style.display = 'block';
-                } else {
-                    nowPlayingDiv.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Failed to load now playing:', error);
-            }
-        }
-
-        // Create song element
-        function createSongElement(song) {
-            const div = document.createElement('div');
-            div.className = 'song-item';
-            
-            const duration = formatDuration(song.duration);
-            
-            div.innerHTML = `
-                <div class="song-info">
-                    <div class="song-title">${song.title}</div>
-                    <div class="song-artist">${song.artist || 'Unknown Artist'} • ${duration}</div>
-                </div>
-                <div class="vote-section">
-                    <div class="vote-count">${song.vote_count} votes</div>
-                    <button onclick="toggleVote(${song.id}, this)" 
-                            data-voted="${song.user_voted || false}">
-                        ${song.user_voted ? '❤️ Voted' : '🤍 Vote'}
-                    </button>
-                </div>
-            `;
-            
-            return div;
-        }
-
-        // Create playlist element
-        function createPlaylistElement(song, position) {
-            const div = document.createElement('div');
-            div.className = 'song-item';
-            
-            const duration = formatDuration(song.duration);
-            
-            div.innerHTML = `
-                <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 50%; margin-right: 15px; font-weight: bold;">
-                    ${position}
-                </div>
-                <div class="song-info">
-                    <div class="song-title">${song.title}</div>
-                    <div class="song-artist">${song.artist || 'Unknown Artist'} • ${duration}</div>
-                </div>
-                <div class="vote-section">
-                    <div class="vote-count">${song.vote_count} votes</div>
-                </div>
-            `;
-            
-            return div;
-        }
-
-        // Toggle vote
-        async function toggleVote(songId, button) {
-            if (!authToken) {
-                showMessage('Please login to vote', 'error');
-                return;
-            }
-
-            const isVoted = button.dataset.voted === 'true';
-            
-            try {
-                const response = await fetch(isVoted ? `/api/vote/${songId}` : '/api/vote', {
-                    method: isVoted ? 'DELETE' : 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: isVoted ? null : JSON.stringify({ songId })
-                });
-                
-                if (response.ok) {
-                    button.dataset.voted = !isVoted;
-                    button.textContent = isVoted ? '🤍 Vote' : '❤️ Voted';
-                    
-                    // Refresh the current tab
-                    const activeTab = document.querySelector('.tab-button.active').textContent.toLowerCase().replace(' ', '');
-                    if (activeTab === 'allsongs') loadSongs();
-                    if (activeTab === 'currentplaylist') loadPlaylist();
-                    
-                    showMessage(isVoted ? 'Vote removed!' : 'Vote added!', 'success', 2000);
-                } else {
-                    const data = await response.json();
-                    showMessage(data.error, 'error');
-                }
-            } catch (error) {
-                showMessage('Vote failed. Please try again.', 'error');
-            }
-        }
-
-        // File upload
-        document.getElementById('fileInput').addEventListener('change', async (e) => {
-            const files = e.target.files;
-            if (files.length === 0) return;
-            
-            const uploadMessage = document.getElementById('uploadMessage');
-            uploadMessage.innerHTML = '<p>Uploading...</p>';
-            
-            for (let file of files) {
-                const formData = new FormData();
-                formData.append('music', file);
-                
                 try {
-                    const response = await fetch('/api/upload', {
+                    const response = await fetch('/api/pause', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${authToken}`
-                        },
-                        body: formData
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
                     });
-                    
-                    const data = await response.json();
-                    
+
                     if (response.ok) {
-                        showMessage(`${data.title} uploaded successfully!`, 'success');
-                    } else {
-                        showMessage(`Failed to upload ${file.name}: ${data.error}`, 'error');
+                        const data = await response.json();
+                        
+                        if (data.playing) {
+                            await this.audioElement.play();
+                            this.playPauseBtn.innerHTML = '⏸️';
+                            this.playPauseBtn.title = 'Pause';
+                        } else {
+                            this.audioElement.pause();
+                            this.playPauseBtn.innerHTML = '▶️';
+                            this.playPauseBtn.title = 'Play';
+                        }
+                        
+                        this.isPlaying = data.playing;
+                        this.showStatus(data.message);
                     }
                 } catch (error) {
-                    showMessage(`Failed to upload ${file.name}`, 'error');
+                    console.error('Error toggling playback:', error);
+                    this.showStatus('Error controlling playback', 'error');
                 }
             }
-            
-            // Clear the file input
-            e.target.value = '';
-            loadSongs();
+
+            async skipSong() {
+                if (!this.currentSong) return;
+
+                try {
+                    const response = await fetch('/api/skip', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.audioElement.pause();
+                        this.audioElement.src = '';
+                        this.currentSong = null;
+                        this.isPlaying = false;
+                        this.updateUI();
+                        this.showStatus('Song skipped');
+                        
+                        // Refresh the playlist
+                        if (typeof loadPlaylist === 'function') {
+                            loadPlaylist();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error skipping song:', error);
+                    this.showStatus('Error skipping song', 'error');
+                }
+            }
+
+            async playNext() {
+                try {
+                    const response = await fetch('/api/play-next', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.song) {
+                            this.currentSong = data.song;
+                            this.audioElement.src = data.streamUrl;
+                            this.isPlaying = true;
+                            
+                            this.updateUI();
+                            
+                            // Try to play
+                            try {
+                                await this.audioElement.play();
+                                this.playPauseBtn.innerHTML = '⏸️';
+                                this.playPauseBtn.title = 'Pause';
+                                this.showStatus(`Now playing: ${data.song.title}`);
+                            } catch (playError) {
+                                console.error('Autoplay blocked:', playError);
+                                this.showStatus('Click play to start music', 'info');
+                            }
+                            
+                            // Refresh the playlist
+                            if (typeof loadPlaylist === 'function') {
+                                loadPlaylist();
+                            }
+                        } else if (data.error) {
+                            this.showStatus(data.error, 'error');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error playing next song:', error);
+                    this.showStatus('Error loading next song', 'error');
+                }
+            }
+
+            async onSongEnded() {
+                try {
+                    const response = await fetch('/api/song-finished', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.currentSong = null;
+                        this.isPlaying = false;
+                        this.updateUI();
+                        this.showStatus('Song finished');
+                        
+                        // Auto-play next song if there is one
+                        setTimeout(() => {
+                            this.playNext();
+                        }, 1000);
+                        
+                        // Refresh the playlist
+                        if (typeof loadPlaylist === 'function') {
+                            loadPlaylist();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling song end:', error);
+                }
+            }
+
+            updateUI() {
+                if (this.currentSong) {
+                    this.playerElement.style.display = 'block';
+                    this.titleElement.textContent = this.currentSong.title || 'Unknown Title';
+                    this.artistElement.textContent = this.currentSong.artist || 'Unknown Artist';
+                    this.playlistIndicator.textContent = 'Playing from playlist';
+                } else {
+                    this.playerElement.style.display = 'none';
+                }
+            }
+
+            updateProgress() {
+                if (!this.audioElement.src || !this.currentSong) return;
+
+                const currentTime = this.audioElement.currentTime || 0;
+                const duration = this.audioElement.duration || this.currentSong.duration || 0;
+                
+                if (duration > 0) {
+                    const progressPercent = (currentTime / duration) * 100;
+                    this.progressFill.style.width = `${progressPercent}%`;
+                }
+
+                // Update time displays
+                this.currentTimeElement.textContent = this.formatTime(currentTime);
+                this.remainingTimeElement.textContent = duration > 0 ? 
+                    `-${this.formatTime(duration - currentTime)}` : '0:00';
+            }
+
+            formatTime(seconds) {
+                if (!seconds || isNaN(seconds)) return '0:00';
+                
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            showStatus(message, type = 'info') {
+                this.statusElement.textContent = message;
+                this.statusElement.className = `player-status show ${type}`;
+                
+                setTimeout(() => {
+                    this.statusElement.classList.remove('show');
+                }, 3000);
+            }
+
+            async checkPlayingStatus() {
+                try {
+                    const response = await fetch('/api/now-playing');
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.playing && data.song) {
+                            // Update current song if different
+                            if (!this.currentSong || this.currentSong.id !== data.song.id) {
+                                this.currentSong = data.song;
+                                this.audioElement.src = `/api/stream/${data.song.filename}`;
+                                this.updateUI();
+                            }
+                            
+                            this.isPlaying = data.playing;
+                            
+                            if (this.isPlaying && this.audioElement.paused) {
+                                // Sync with server time
+                                if (data.currentTime && this.audioElement.duration) {
+                                    this.audioElement.currentTime = Math.min(data.currentTime, this.audioElement.duration);
+                                }
+                                this.audioElement.play().catch(e => console.error('Sync play error:', e));
+                            }
+                            
+                        } else if (!data.playing || !data.song) {
+                            // Nothing playing on server
+                            if (this.currentSong) {
+                                this.audioElement.pause();
+                                this.audioElement.src = '';
+                                this.currentSong = null;
+                                this.isPlaying = false;
+                                this.updateUI();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking playing status:', error);
+                }
+            }
+
+            startPeriodicUpdates() {
+                // Update progress every second
+                this.updateInterval = setInterval(() => {
+                    this.updateProgress();
+                }, 1000);
+
+                // Check server status every 5 seconds
+                this.checkInterval = setInterval(() => {
+                    this.checkPlayingStatus();
+                }, 5000);
+
+                // Initial status check
+                this.checkPlayingStatus();
+            }
+
+            destroy() {
+                if (this.updateInterval) clearInterval(this.updateInterval);
+                if (this.checkInterval) clearInterval(this.checkInterval);
+                this.audioElement.pause();
+                this.audioElement.src = '';
+            }
+        }
+
+        // Initialize the player when the page loads
+        let jukeboxPlayer;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait a moment for other scripts to load
+            setTimeout(() => {
+                jukeboxPlayer = new JukeboxPlayer();
+            }, 1000);
         });
 
-        // Utility functions
-        function formatDuration(seconds) {
-            if (!seconds) return '0:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function showMessage(message, type, duration = 5000) {
-            const messageDiv = document.getElementById('authMessage');
-            messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
-            
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, duration);
-        }
-
-        // Rescan music directory
-        async function rescanMusic() {
-            if (!authToken) {
-                showMessage('Please login to rescan music', 'error');
-                return;
+        // Clean up when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (jukeboxPlayer) {
+                jukeboxPlayer.destroy();
             }
-
-            const button = event.target;
-            const originalText = button.textContent;
-            button.textContent = '🔄 Scanning...';
-            button.disabled = true;
-
-            try {
-                const response = await fetch('/api/rescan', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showMessage('Music directory rescanned successfully!', 'success');
-                    loadSongs(); // Refresh the song list
-                } else {
-                    showMessage(data.error || 'Rescan failed', 'error');
-                }
-            } catch (error) {
-                showMessage('Rescan failed. Please try again.', 'error');
-            } finally {
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-        }
-
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            if (authToken) {
-                loadNowPlaying();
-                const activeTab = document.querySelector('.tab-button.active');
-                if (activeTab) {
-                    const tabName = activeTab.textContent.toLowerCase().replace(' ', '');
-                    if (tabName === 'allsongs') loadSongs();
-                    if (tabName === 'currentplaylist') loadPlaylist();
-                }
-            }
-        }, 30000);
+        });
     </script>
 </body>
 </html>
