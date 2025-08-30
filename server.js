@@ -625,7 +625,7 @@ app.post('/api/play-next', authenticateJWT, (req, res) => { //red curly bracket
       streamUrl: `/api/stream/${song.filename}`
     });
   });
-
+});
 
 // Pause/Resume playback
 app.post('/api/pause', authenticateJWT, (req, res) => { //red curly bracket
