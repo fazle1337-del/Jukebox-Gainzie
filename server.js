@@ -426,6 +426,8 @@ app.post('/api/vote', authenticateJWT, (req, res) => {
   const { songId } = req.body;
   const userId = req.user.id;
   
+  console.log(`User ${userId} attempting to vote for song ${songId}`); // Add this log 
+
   if (!songId) {
     return res.status(400).json({ error: 'Song ID is required' });
   }
@@ -477,6 +479,8 @@ app.delete('/api/vote/:songId', authenticateJWT, (req, res) => {
   const songId = req.params.songId;
   const userId = req.user.id;
   
+  console.log(`User ${userId} attempting to remove vote for song ${songId}`); // Add this log
+
   db.run(
     'DELETE FROM votes WHERE user_id = ? AND song_id = ?',
     [userId, songId],
