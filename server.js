@@ -50,7 +50,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // Create tables
 db.serialize(() => {
   // Users table
-  db.run(`DROP TABLE IF EXISTS users`);
+//  db.run(`DROP TABLE IF EXISTS users`);
   db.run(`
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +62,7 @@ db.serialize(() => {
   `);
 
   // Songs table
-  db.run(`DROP TABLE IF EXISTS songs`); 
+ // db.run(`DROP TABLE IF EXISTS songs`); 
   db.run(`
     CREATE TABLE songs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,7 +79,7 @@ db.serialize(() => {
   `);
 
   // Votes table
-  db.run(`DROP TABLE IF EXISTS votes`); 
+  // db.run(`DROP TABLE IF EXISTS votes`); 
   db.run(`
     CREATE TABLE votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
