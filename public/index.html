@@ -474,6 +474,7 @@
         let playlist = [];
         let currentSong = null;
         let isPlaying = false;
+        let userVotes = [];
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -605,9 +606,37 @@
             showAlert('Logged out successfully', 'success');
         }
 
+//New function to load user's votes:
+async function loadUserVotes() {
+    if (!authToken) {
+        userVotes = [];
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/my-votes', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            userVotes = data.votedSongs;
+        } else {
+            console.error('Failed to load user votes');
+            userVotes = [];
+        }
+    } catch (error) {
+        console.error('Error loading user votes:', error);
+        userVotes = [];
+    }
+}
+
         function showAppSection() {
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
+            loadUserVotes();
         }
 
         // Songs functions

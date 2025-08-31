@@ -495,6 +495,25 @@ app.delete('/api/vote/:songId', authenticateJWT, (req, res) => {
   );
 });
 
+// Get user's votes
+app.get('/api/my-votes', authenticateJWT, (req, res) => {
+  const userId = req.user.id;
+  
+  const query = `
+    SELECT song_id FROM votes WHERE user_id = ?
+  `;
+  
+  db.all(query, [userId], (err, rows) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    const votedSongIds = rows.map(row => row.song_id);
+    res.json({ votedSongs: votedSongIds });
+  });
+});
+
 // Upload music file
 app.post('/api/upload', authenticateJWT, upload.single('musicFile'), (req, res) => {
   if (!req.file) {
