@@ -406,10 +406,13 @@ app.get('/api/playlist', (req, res) => {
     LEFT JOIN votes v ON s.id = v.song_id 
     GROUP BY s.id, s.title, s.artist, s.album, s.filename, s.duration
     HAVING COUNT(v.id) > 0
-    ORDER BY COUNT(v.id) DESC, s.id ASC
+    ORDER BY
+      CASE WHEN s.id = ? THEN 0 ELSE 1 END,
+      COUNT(v.id) DESC, 
+      s.id ASC
   `;
   
-  db.all(query, [currentlyPlaying.songId], (err, rows) => {
+  db.all(query, [currentlyPlaying.songId, currentlyPlaying.songId], (err, rows) => {
     if (err) {
       console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
