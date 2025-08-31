@@ -699,8 +699,8 @@ async function loadUserVotes() {
                     </div>
                     <div class="vote-section">
                         <span class="vote-count">${song.votes} votes</span>
-                        <button class="vote-btn" onclick="toggleVote(${song.id})">
-                            ${song.votes > 0 ? '🗳️ Vote' : '👍 Vote'}
+                        <button class="vote-btn ${userVotes.includes(song.id) ? 'voted' : ''}" onclick="toggleVote(${song.id})">                                                                                                                                                                                                                         
+                            ${userVotes.includes(song.id) ? '🗳️ Voted' : '👍 Vote'}                                                                                                                                                                                                                                                                      
                         </button>
                     </div>
                 </div>
@@ -726,6 +726,7 @@ async function loadUserVotes() {
                 const data = await response.json();
                 
                 if (response.ok) {
+                    userVotes.push(songId); //adds local array
                     showAlert('Vote added!', 'success');
                     loadSongs();
                     loadPlaylist();
@@ -739,6 +740,7 @@ async function loadUserVotes() {
                     });
                     
                     if (removeResponse.ok) {
+                        userVotes = userVotes.filter(id => id !== songId); //removes from local array
                         showAlert('Vote removed!', 'success');
                         loadSongs();
                         loadPlaylist();
