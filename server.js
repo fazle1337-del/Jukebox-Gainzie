@@ -452,6 +452,18 @@ app.post('/api/vote', authenticateJWT, (req, res) => {
         }
         
         res.json({ message: 'Vote added successfully' });
+
+        // Auto-start playlist if nothing is playing
+        setTimeout(() => {
+          if (!currentlyPlaying.isPlaying && !currentlyPlaying.songId) {
+            console.log('Auto-starting playlist due to new vote...');
+            playNextSong((song) => {
+              if (song) {
+                console.log(`Auto-playing: ${song.title} by ${song.artist}`);
+              }
+            });
+          }
+        }, 500);
       }
     );
   });

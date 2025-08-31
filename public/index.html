@@ -915,22 +915,34 @@
                     const data = await response.json();
                     
                     if (data.playing && data.song) {
+                        // Show player if song is playing
+                        document.getElementById('musicPlayer').style.display = 'block';
+                        
                         if (!currentSong || currentSong.id !== data.song.id) {
                             currentSong = data.song;
                             const audioElement = document.getElementById('audioElement');
-                            audioElement.src = `/api/stream/${data.song.filename}`;
                             
+                            // Set audio source if different song
+                            if (audioElement.src !== `/api/stream/${data.song.filename}`) {
+                            audioElement.src = `/api/stream/${data.song.filename}`;
+                            }
+
                             document.getElementById('currentTitle').textContent = data.song.title;
                             document.getElementById('currentArtist').textContent = data.song.artist;
-                            document.getElementById('musicPlayer').style.display = 'block';
-                            
+                           
                             audioElement.onended = songFinished;
-                        }
                         
+                            // Sync playback with server state
+                            if (data.playing && audioElement.paused) {
+                                audioElement.play().catch(e => console.log('Autoplay blocked:', e));
+                            }
+                        }
+                                                
                         isPlaying = data.playing;
                         document.getElementById('playPauseBtn').innerHTML = data.playing ? '⏸️' : '▶️';
                         
-                    } else if (!data.playing || !data.song) {
+                    } else {
+                    // Hide player if nothing playing
                         if (currentSong) {
                             const audioElement = document.getElementById('audioElement');
                             audioElement.pause();
