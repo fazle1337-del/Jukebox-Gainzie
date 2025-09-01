@@ -8,9 +8,17 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { spawn } = require('child_process');
 const ffprobe = require('ffprobe-static');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Rate limiter for login route
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: { error: "Too many login attempts, please try again later." }
+});
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware
@@ -372,7 +380,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // Login user
-app.post('/api/login', (req, res) => {
+app.post('/api/login', loginLimiter, (req, res) => {
   console.log('Login endpoint called with:', req.body);
   const { username, password } = req.body;
   
