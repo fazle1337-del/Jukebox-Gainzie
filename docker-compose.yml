@@ -17,7 +17,7 @@ services:
       - jukebox_db:/app/database
     environment:
       - NODE_ENV=production
-      - JWT_SECRET=your-super-secret-jwt-key-change-this
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-v2
       - DB_PATH=/app/database/jukebox.db
       - MUSIC_PATH=/app/music
       - UPLOAD_PATH=/app/uploads
