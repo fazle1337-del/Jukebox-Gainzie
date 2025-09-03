@@ -646,10 +646,14 @@ app.post('/api/vote', requireUserOrAdmin, (req, res) => {
             playNextSong((song) => {
               if (song) {
                 console.log(`Auto-playing: ${song.title} by ${song.artist}`);
+              } else {
+                console.log('No song found to auto-play');
               }
             });
+          } else {
+            console.log('Auto-play skipped: currently playing or songId exists');
           }
-        }, 500);
+        }, 1000);
       }
     );
   });
