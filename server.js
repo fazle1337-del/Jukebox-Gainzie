@@ -57,6 +57,7 @@ db.serialize(() => {
       username TEXT UNIQUE NOT NULL,
       email TEXT,
       password TEXT NOT NULL,
+      role TEXT DEFAULT 'user',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -141,6 +142,94 @@ const authenticateJWT = (req, res, next) => {
     req.user = user;
     console.log('Authenticated user:', req.user); //debug user token
     next();
+  });
+};
+
+// Role-based middleware functions
+const requireAdmin = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    // Check user role from database
+    db.get('SELECT role FROM users WHERE id = ?', [user.id], (dbErr, userRecord) => {
+      if (dbErr || !userRecord) {
+        return res.status(403).json({ error: 'User not found' });
+      }
+
+      if (userRecord.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      req.user = { ...user, role: userRecord.role };
+      next();
+    });
+  });
+};
+
+const requirePlayerOrAdmin = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    // Check user role from database
+    db.get('SELECT role FROM users WHERE id = ?', [user.id], (dbErr, userRecord) => {
+      if (dbErr || !userRecord) {
+        return res.status(403).json({ error: 'User not found' });
+      }
+
+      if (!['player', 'admin'].includes(userRecord.role)) {
+        return res.status(403).json({ error: 'Player or admin access required' });
+      }
+
+      req.user = { ...user, role: userRecord.role };
+      next();
+    });
+  });
+};
+
+const requireUserOrAdmin = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+
+    // Check user role from database
+    db.get('SELECT role FROM users WHERE id = ?', [user.id], (dbErr, userRecord) => {
+      if (dbErr || !userRecord) {
+        return res.status(403).json({ error: 'User not found' });
+      }
+
+      if (!['user', 'admin'].includes(userRecord.role)) {
+        return res.status(403).json({ error: 'User or admin access required' });
+      }
+
+      req.user = { ...user, role: userRecord.role };
+      next();
+    });
   });
 };
 
@@ -303,11 +392,11 @@ app.post('/api/register', async (req, res) => {
           return res.status(500).json({ error: 'Registration failed' });
         }
         
-        const token = jwt.sign({ id: this.lastID, username }, JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ 
+        const token = jwt.sign({ id: this.lastID, username, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
+        res.status(201).json({
           message: 'User registered successfully',
           token,
-          user: { id: this.lastID, username }
+          user: { id: this.lastID, username, role: 'user' }
         });
       }
     );
@@ -343,17 +432,18 @@ app.post('/api/login', (req, res) => {
       }
       
       const token = jwt.sign(
-        { id: user.id, username: user.username },
+        { id: user.id, username: user.username, role: user.role },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
-      
+
       res.json({
         message: 'Login successful',
         token,
         user: {
           id: user.id,
-          username: user.username
+          username: user.username,
+          role: user.role
         }
       });
     } catch (error) {
@@ -423,7 +513,7 @@ app.get('/api/playlist', (req, res) => {
 });
 
 // Vote for a song
-app.post('/api/vote', authenticateJWT, (req, res) => {
+app.post('/api/vote', requireUserOrAdmin, (req, res) => {
   const { songId } = req.body;
   const userId = req.user.id;
   
@@ -476,7 +566,7 @@ app.post('/api/vote', authenticateJWT, (req, res) => {
 });
 
 // Remove vote
-app.delete('/api/vote/:songId', authenticateJWT, (req, res) => {
+app.delete('/api/vote/:songId', requireUserOrAdmin, (req, res) => {
   const songId = req.params.songId;
   const userId = req.user.id;
   
@@ -501,7 +591,7 @@ app.delete('/api/vote/:songId', authenticateJWT, (req, res) => {
 });
 
 // Get user's votes
-app.get('/api/my-votes', authenticateJWT, (req, res) => {
+app.get('/api/my-votes', requireUserOrAdmin, (req, res) => {
   const userId = req.user.id;
   
   const query = `
@@ -520,7 +610,7 @@ app.get('/api/my-votes', authenticateJWT, (req, res) => {
 });
 
 // Upload music file
-app.post('/api/upload', authenticateJWT, upload.single('musicFile'), (req, res) => {
+app.post('/api/upload', requireUserOrAdmin, upload.single('musicFile'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
@@ -652,7 +742,7 @@ app.get('/api/now-playing', (req, res) => {
 });
 
 // Start playing next song
-app.post('/api/play-next', authenticateJWT, (req, res) => { //red curly bracket
+app.post('/api/play-next', requirePlayerOrAdmin, (req, res) => { //red curly bracket
   playNextSong((song) => {    
     if (!song) {
       return res.json({ error: 'No songs in playlist' });
@@ -667,7 +757,7 @@ app.post('/api/play-next', authenticateJWT, (req, res) => { //red curly bracket
 });
 
 // Pause/Resume playback
-app.post('/api/pause', authenticateJWT, (req, res) => { //red curly bracket
+app.post('/api/pause', requirePlayerOrAdmin, (req, res) => { //red curly bracket
   if (!currentlyPlaying.songId) {
     return res.status(400).json({ error: 'Nothing currently playing' });
   }
@@ -709,7 +799,7 @@ app.post('/api/pause', authenticateJWT, (req, res) => { //red curly bracket
 });
 
 // Skip to next song
-app.post('/api/skip', authenticateJWT, (req, res) => {
+app.post('/api/skip', requirePlayerOrAdmin, (req, res) => {
   if (!currentlyPlaying.songId) {
     return res.json({ error: 'Nothing currently playing' });
   }
@@ -743,7 +833,7 @@ app.post('/api/skip', authenticateJWT, (req, res) => {
 });
 
 // Song finished
-app.post('/api/song-finished', authenticateJWT, (req, res) => {
+app.post('/api/song-finished', requirePlayerOrAdmin, (req, res) => {
   if (!currentlyPlaying.songId) {
     return res.json({ error: 'Nothing currently playing' });
   }
@@ -774,6 +864,250 @@ app.post('/api/song-finished', authenticateJWT, (req, res) => {
  
     res.json({ message: 'Song finished, votes removed' });
   });
+});
+
+// ADMIN ENDPOINTS
+
+// Get all users
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  const query = `
+    SELECT
+      id,
+      username,
+      email,
+      role,
+      created_at,
+      (SELECT COUNT(*) FROM votes WHERE user_id = users.id) as vote_count
+    FROM users
+    ORDER BY created_at DESC
+  `;
+
+  db.all(query, [], (err, users) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(users);
+  });
+});
+
+// Update user role (admin only)
+app.put('/api/admin/users/:userId/role', requireAdmin, (req, res) => {
+  const userId = req.params.userId;
+  const { role } = req.body;
+
+  if (!['user', 'player', 'admin'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role. Must be "user", "player", or "admin"' });
+  }
+
+  // Prevent admin from changing their own role
+  if (parseInt(userId) === req.user.id) {
+    return res.status(400).json({ error: 'Cannot change your own role' });
+  }
+
+  db.run('UPDATE users SET role = ? WHERE id = ?', [role, userId], function(err) {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'User role updated successfully' });
+  });
+});
+
+// Delete user (admin only)
+app.delete('/api/admin/users/:userId', requireAdmin, (req, res) => {
+  const userId = req.params.userId;
+
+  // Prevent admin from deleting themselves
+  if (parseInt(userId) === req.user.id) {
+    return res.status(400).json({ error: 'Cannot delete your own account' });
+  }
+
+  db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'User deleted successfully' });
+  });
+});
+
+// Delete song (admin only)
+app.delete('/api/admin/songs/:songId', requireAdmin, (req, res) => {
+  const songId = req.params.songId;
+
+  // Get song info first to delete file
+  db.get('SELECT filename, is_upload FROM songs WHERE id = ?', [songId], (err, song) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!song) {
+      return res.status(404).json({ error: 'Song not found' });
+    }
+
+    // Delete from database first
+    db.run('DELETE FROM songs WHERE id = ?', [songId], function(deleteErr) {
+      if (deleteErr) {
+        console.error('Database error:', deleteErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      // Delete physical file if it's an upload
+      if (song.is_upload) {
+        const filePath = path.join(__dirname, 'uploads', song.filename);
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) {
+            console.error('Error deleting file:', unlinkErr);
+          }
+        });
+      }
+
+      res.json({ message: 'Song deleted successfully' });
+    });
+  });
+});
+
+// Clear all votes for a song (admin only)
+app.delete('/api/admin/songs/:songId/votes', requireAdmin, (req, res) => {
+  const songId = req.params.songId;
+
+  db.run('DELETE FROM votes WHERE song_id = ?', [songId], function(err) {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    res.json({
+      message: 'All votes cleared for song',
+      deletedVotes: this.changes
+    });
+  });
+});
+
+// Get system stats (admin only)
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
+  const queries = [
+    'SELECT COUNT(*) as total_users FROM users',
+    'SELECT COUNT(*) as total_songs FROM songs',
+    'SELECT COUNT(*) as total_votes FROM votes',
+    'SELECT COUNT(*) as uploaded_songs FROM songs WHERE is_upload = 1',
+    'SELECT COUNT(*) as admin_users FROM users WHERE role = "admin"',
+    'SELECT COUNT(*) as player_users FROM users WHERE role = "player"',
+    'SELECT COUNT(*) as regular_users FROM users WHERE role = "user"'
+  ];
+
+  Promise.all(queries.map(query =>
+    new Promise((resolve, reject) => {
+      db.get(query, [], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    })
+  )).then(results => {
+    res.json({
+      totalUsers: results[0].total_users,
+      totalSongs: results[1].total_songs,
+      totalVotes: results[2].total_votes,
+      uploadedSongs: results[3].uploaded_songs,
+      adminUsers: results[4].admin_users,
+      playerUsers: results[5].player_users,
+      regularUsers: results[6].regular_users
+    });
+  }).catch(err => {
+    console.error('Stats error:', err);
+    res.status(500).json({ error: 'Database error' });
+  });
+});
+
+// Force play specific song (admin only)
+app.post('/api/admin/play-song/:songId', requireAdmin, (req, res) => {
+  const songId = req.params.songId;
+
+  db.get('SELECT * FROM songs WHERE id = ?', [songId], (err, song) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!song) {
+      return res.status(404).json({ error: 'Song not found' });
+    }
+
+    // Clear any existing timeout
+    if (playTimeout) {
+      clearTimeout(playTimeout);
+      playTimeout = null;
+    }
+
+    // Set as currently playing
+    currentlyPlaying = {
+      songId: song.id,
+      startTime: Date.now(),
+      duration: song.duration,
+      isPlaying: true,
+      pausedAt: null
+    };
+
+    // Set timeout for next song
+    if (song.duration) {
+      playTimeout = setTimeout(() => {
+        playNextSong(() => {});
+      }, song.duration * 1000);
+    }
+
+    res.json({
+      message: 'Song force-played by admin',
+      song: song,
+      streamUrl: `/api/stream/${song.filename}`
+    });
+  });
+});
+
+// Clear all votes (admin only)
+app.delete('/api/admin/votes', requireAdmin, (req, res) => {
+  db.run('DELETE FROM votes', [], function(err) {
+    if (err) {
+      console.error('Database error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    res.json({
+      message: 'All votes cleared',
+      deletedVotes: this.changes
+    });
+  });
+});
+
+// Reset player state (admin only)
+app.post('/api/admin/reset-player', requireAdmin, (req, res) => {
+  // Clear any existing timeout
+  if (playTimeout) {
+    clearTimeout(playTimeout);
+    playTimeout = null;
+  }
+
+  // Reset player state
+  currentlyPlaying = {
+    songId: null,
+    startTime: null,
+    duration: null,
+    isPlaying: false,
+    pausedAt: null
+  };
+
+  res.json({ message: 'Player state reset' });
 });
 
 // Error handling middleware
