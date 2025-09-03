@@ -1001,7 +1001,11 @@
         }
 
         function canControlPlayer() {
-            return isPlayer() || isAdmin();
+            return currentUser && currentUser.role === 'player';
+        }
+
+        function canViewPlayer() {
+            return canControlPlayer() || isAdmin();
         }
 
         function canUpload() {
@@ -1576,30 +1580,30 @@
 
                     updatePlayerControlsVisibility();
                     
-                    if (data.playing && data.song) {
+                    if (data.playing && data.song && canViewPlayer()) {
                         document.getElementById('musicPlayer').style.display = 'block';
-                        
+
                         if (!currentSong || currentSong.id !== data.song.id) {
                             currentSong = data.song;
                             const audioElement = document.getElementById('audioElement');
-                            
+
                             if (audioElement.src !== `/api/stream/${data.song.filename}`) {
                                 audioElement.src = `/api/stream/${data.song.filename}`;
                             }
 
                             document.getElementById('currentTitle').textContent = data.song.title;
                             document.getElementById('currentArtist').textContent = data.song.artist;
-                           
+
                             audioElement.onended = songFinished;
-                        
+
                             if (data.playing && audioElement.paused) {
                                 audioElement.play().catch(e => console.log('Autoplay blocked:', e));
                             }
                         }
-                                                
+
                         isPlaying = data.playing;
                         document.getElementById('playPauseBtn').innerHTML = data.playing ? '⏸️' : '▶️';
-                        
+
                     } else {
                         if (currentSong) {
                             const audioElement = document.getElementById('audioElement');
@@ -1910,6 +1914,8 @@
 
                     document.getElementById('currentTitle').textContent = data.song.title;
                     document.getElementById('currentArtist').textContent = data.song.artist;
+
+                    // Show player for admin when force playing
                     document.getElementById('musicPlayer').style.display = 'block';
 
                     try {
