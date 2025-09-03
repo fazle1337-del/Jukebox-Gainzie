@@ -976,7 +976,7 @@
             }
 
             // Start periodic updates
-            setInterval(checkPlayingStatus, 5000);
+            setInterval(checkPlayingStatus, 2000);
             setInterval(loadPlaylist, 10000);
         });
 
@@ -1238,15 +1238,16 @@
             try {
                 const response = await fetch('/api/songs');
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     songs = data;
                     displaySongs(songs);
+                    checkPlayingStatus(); // Update player status after songs load
                 } else {
                     console.error('Failed to load songs:', data.error);
                 }
             } catch (error) {
-                console.error('Error loading songs:', error);
+                console.error('Error loading songs:', data.error);
             }
         }
 
@@ -1349,10 +1350,11 @@
             try {
                 const response = await fetch('/api/playlist');
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     playlist = data;
                     displayPlaylist(playlist);
+                    checkPlayingStatus(); // Update player status after playlist load
                 } else {
                     console.error('Failed to load playlist:', data.error);
                 }
