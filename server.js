@@ -96,6 +96,55 @@ db.serialize(() => {
   console.log('Database tables created/verified');
 });
 
+// Create default admin user if none exists
+async function createDefaultAdmin() {
+  return new Promise((resolve, reject) => {
+    // Check if any admin user exists
+    db.get('SELECT COUNT(*) as adminCount FROM users WHERE role = ?', ['admin'], async (err, row) => {
+      if (err) {
+        console.error('Error checking for admin users:', err);
+        return reject(err);
+      }
+
+      if (row.adminCount === 0) {
+        console.log('No admin user found. Creating default admin account...');
+
+        try {
+          // Hash the default password
+          const hashedPassword = await bcrypt.hash('admin123', 10);
+
+          // Create the default admin user
+          db.run(
+            'INSERT INTO users (username, password, role, email, created_at) VALUES (?, ?, ?, ?, ?)',
+            ['admin', hashedPassword, 'admin', 'admin@jukebox.local', new Date().toISOString()],
+            function(err) {
+              if (err) {
+                console.error('Error creating default admin user:', err);
+                return reject(err);
+              }
+
+              console.log('✅ Default admin user created successfully!');
+              console.log('   Username: admin');
+              console.log('   Password: admin123');
+              console.log('   Role: admin');
+              console.log('   ⚠️  IMPORTANT: Change the default password after first login!');
+              console.log('');
+
+              resolve();
+            }
+          );
+        } catch (hashError) {
+          console.error('Error hashing admin password:', hashError);
+          reject(hashError);
+        }
+      } else {
+        console.log(`Found ${row.adminCount} admin user(s). Skipping default admin creation.`);
+        resolve();
+      }
+    });
+  });
+}
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -1132,18 +1181,41 @@ app.use((req, res) => {
 // Initialize and start server
 console.log('🎵 Starting Jukebox server...');
 
-// Scan for music files
-setTimeout(() => {
-  scanMusicFiles();
-}, 1000);
+// Create default admin user if needed, then start server
+createDefaultAdmin()
+  .then(() => {
+    console.log('✅ Admin user check completed.');
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🎵 Jukebox server running on port ${PORT}`);
-  console.log(`🌐 Access at: http://localhost:${PORT}`);
-  console.log(`📁 Music directory: ./music`);
-  console.log(`📤 Uploads directory: ./uploads`);
-  console.log(`🗄️ Database: ${dbPath}`);
-});
+    // Scan for music files
+    setTimeout(() => {
+      scanMusicFiles();
+    }, 1000);
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🎵 Jukebox server running on port ${PORT}`);
+      console.log(`🌐 Access at: http://localhost:${PORT}`);
+      console.log(`📁 Music directory: ./music`);
+      console.log(`📤 Uploads directory: ./uploads`);
+      console.log(`🗄️ Database: ${dbPath}`);
+      console.log('');
+      console.log('🚀 Server ready! Access the application at the URL above.');
+      console.log('👤 Default admin account: admin / admin123 (change password after login!)');
+    });
+  })
+  .catch((error) => {
+    console.error('❌ Failed to initialize admin user:', error);
+    console.log('🔄 Attempting to start server anyway...');
+
+    // Still try to start the server even if admin creation fails
+    setTimeout(() => {
+      scanMusicFiles();
+    }, 1000);
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🎵 Jukebox server running on port ${PORT} (with warnings)`);
+      console.log(`🌐 Access at: http://localhost:${PORT}`);
+    });
+  });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
