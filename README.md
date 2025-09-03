@@ -135,16 +135,23 @@ Jukebox-Gainzie/
 3. **Create an admin user** (see Admin Setup below)
 4. **Start voting** on existing songs or upload new ones!
 
-### Admin Setup
-**The admin account is automatically created on first startup!**
+### Default Accounts Setup
+**Both admin and player accounts are automatically created on first startup!**
 
 When you start the server for the first time, it will automatically create:
+
+**👑 Admin Account:**
 - **Username:** `admin`
 - **Password:** `admin123`
-- **Role:** `admin`
+- **Role:** `admin` (full system control)
+
+**🎧 Player Account:**
+- **Username:** `dj_player`
+- **Password:** `player123`
+- **Role:** `player` (music playback control)
 
 ```bash
-# Start the server (admin account will be created automatically)
+# Start the server (both accounts will be created automatically)
 node server.js
 
 # Or with Docker
@@ -152,21 +159,23 @@ docker-compose up -d
 ```
 
 **⚠️ IMPORTANT SECURITY STEPS:**
-1. **Login immediately** with `admin` / `admin123`
-2. **Change the password** in your user profile
-3. **Consider changing the username** for security
+1. **Login immediately** with both accounts
+2. **Change the default passwords** in user profiles
+3. **Consider changing usernames** for better security
+4. **Use the admin account** to manage user roles
 
-### Manual Admin Creation (Alternative)
-If you need to create additional admin accounts:
+### Manual Account Creation (Alternative)
+If you need to create additional accounts:
 
 ```bash
 # Generate password hash
 node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('your_password', 10).then(h => console.log(h));"
 
-# Create admin user in database
+# Create additional accounts in database
 sqlite3 database/jukebox.db
 INSERT INTO users (username, password, role, email, created_at)
-VALUES ('newadmin', '$2a$10$your_hash_here', 'admin', 'admin@example.com', datetime('now'));
+VALUES ('newadmin', '$2a$10$your_hash_here', 'admin', 'admin@example.com', datetime('now')),
+       ('dj_backup', '$2a$10$your_hash_here', 'player', 'dj@example.com', datetime('now'));
 .exit
 ```
 

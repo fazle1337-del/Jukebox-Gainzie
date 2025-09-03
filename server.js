@@ -96,52 +96,93 @@ db.serialize(() => {
   console.log('Database tables created/verified');
 });
 
-// Create default admin user if none exists
-async function createDefaultAdmin() {
-  return new Promise((resolve, reject) => {
-    // Check if any admin user exists
-    db.get('SELECT COUNT(*) as adminCount FROM users WHERE role = ?', ['admin'], async (err, row) => {
-      if (err) {
-        console.error('Error checking for admin users:', err);
-        return reject(err);
-      }
+// Create default accounts if they don't exist
+async function createDefaultAccounts() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Check if any admin user exists
+      const adminCheck = await new Promise((resolve, reject) => {
+        db.get('SELECT COUNT(*) as adminCount FROM users WHERE role = ?', ['admin'], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
 
-      if (row.adminCount === 0) {
+      // Check if any player user exists
+      const playerCheck = await new Promise((resolve, reject) => {
+        db.get('SELECT COUNT(*) as playerCount FROM users WHERE role = ?', ['player'], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+
+      let adminCreated = false;
+      let playerCreated = false;
+
+      // Create admin if none exists
+      if (adminCheck.adminCount === 0) {
         console.log('No admin user found. Creating default admin account...');
 
-        try {
-          // Hash the default password
-          const hashedPassword = await bcrypt.hash('admin123', 10);
-
-          // Create the default admin user
+        const adminHash = await bcrypt.hash('admin123', 10);
+        await new Promise((resolve, reject) => {
           db.run(
             'INSERT INTO users (username, password, role, email, created_at) VALUES (?, ?, ?, ?, ?)',
-            ['admin', hashedPassword, 'admin', 'admin@jukebox.local', new Date().toISOString()],
+            ['admin', adminHash, 'admin', 'admin@jukebox.local', new Date().toISOString()],
             function(err) {
-              if (err) {
-                console.error('Error creating default admin user:', err);
-                return reject(err);
-              }
-
-              console.log('✅ Default admin user created successfully!');
-              console.log('   Username: admin');
-              console.log('   Password: admin123');
-              console.log('   Role: admin');
-              console.log('   ⚠️  IMPORTANT: Change the default password after first login!');
-              console.log('');
-
-              resolve();
+              if (err) reject(err);
+              else resolve();
             }
           );
-        } catch (hashError) {
-          console.error('Error hashing admin password:', hashError);
-          reject(hashError);
-        }
+        });
+
+        console.log('✅ Default admin user created successfully!');
+        console.log('   Username: admin');
+        console.log('   Password: admin123');
+        console.log('   Role: admin');
+        adminCreated = true;
       } else {
-        console.log(`Found ${row.adminCount} admin user(s). Skipping default admin creation.`);
-        resolve();
+        console.log(`Found ${adminCheck.adminCount} admin user(s). Skipping default admin creation.`);
       }
-    });
+
+      // Create player if none exists
+      if (playerCheck.playerCount === 0) {
+        console.log('No player user found. Creating default player account...');
+
+        const playerHash = await bcrypt.hash('player123', 10);
+        await new Promise((resolve, reject) => {
+          db.run(
+            'INSERT INTO users (username, password, role, email, created_at) VALUES (?, ?, ?, ?, ?)',
+            ['dj_player', playerHash, 'player', 'dj@jukebox.local', new Date().toISOString()],
+            function(err) {
+              if (err) reject(err);
+              else resolve();
+            }
+          );
+        });
+
+        console.log('✅ Default player user created successfully!');
+        console.log('   Username: dj_player');
+        console.log('   Password: player123');
+        console.log('   Role: player');
+        playerCreated = true;
+      } else {
+        console.log(`Found ${playerCheck.playerCount} player user(s). Skipping default player creation.`);
+      }
+
+      // Show security warnings
+      if (adminCreated || playerCreated) {
+        console.log('');
+        console.log('🔐 SECURITY REMINDER:');
+        console.log('   ⚠️  Change default passwords after first login!');
+        console.log('   ⚠️  Consider changing usernames for better security!');
+        console.log('');
+      }
+
+      resolve();
+    } catch (error) {
+      console.error('Error creating default accounts:', error);
+      reject(error);
+    }
   });
 }
 
@@ -1181,10 +1222,10 @@ app.use((req, res) => {
 // Initialize and start server
 console.log('🎵 Starting Jukebox server...');
 
-// Create default admin user if needed, then start server
-createDefaultAdmin()
+// Create default accounts if needed, then start server
+createDefaultAccounts()
   .then(() => {
-    console.log('✅ Admin user check completed.');
+    console.log('✅ Default accounts check completed.');
 
     // Scan for music files
     setTimeout(() => {
@@ -1199,7 +1240,10 @@ createDefaultAdmin()
       console.log(`🗄️ Database: ${dbPath}`);
       console.log('');
       console.log('🚀 Server ready! Access the application at the URL above.');
-      console.log('👤 Default admin account: admin / admin123 (change password after login!)');
+      console.log('👥 Default accounts created:');
+      console.log('   👑 Admin:  admin / admin123');
+      console.log('   🎧 Player: dj_player / player123');
+      console.log('   ⚠️  IMPORTANT: Change default passwords after login!');
     });
   })
   .catch((error) => {
