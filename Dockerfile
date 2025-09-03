@@ -32,5 +32,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Run the application
-CMD ["npm", "start"]
+# Clear votes on startup and run the application
+CMD ["sh", "-c", "node clear_votes.js && npm start"]
