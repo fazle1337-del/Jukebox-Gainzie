@@ -1438,15 +1438,17 @@
                     const audioElement = document.getElementById('audioElement');
                     const playPauseBtn = document.getElementById('playPauseBtn');
                     
-                    if (data.playing) {
-                        audioElement.play();
-                        playPauseBtn.innerHTML = '⏸️';
-                        isPlaying = true;
-                    } else {
-                        audioElement.pause();
-                        playPauseBtn.innerHTML = '▶️';
-                        isPlaying = false;
-                    }
+                     if (data.playing) {
+                         if (isPlayer()) {
+                             audioElement.play();
+                         }
+                         playPauseBtn.innerHTML = '⏸️';
+                         isPlaying = true;
+                     } else {
+                         audioElement.pause();
+                         playPauseBtn.innerHTML = '▶️';
+                         isPlaying = false;
+                     }
                 }
             } catch (error) {
                 console.error('Error toggling playback:', error);
@@ -1481,12 +1483,14 @@
                         document.getElementById('musicPlayer').style.display = 'block';
                         
                         try {
-                            await audioElement.play();
+                            if (isPlayer()) {
+                                await audioElement.play();
+                            }
                             document.getElementById('playPauseBtn').innerHTML = '⏸️';
                             isPlaying = true;
-                            
+
                             audioElement.onended = songFinished;
-                            
+
                         } catch (playError) {
                             console.error('Autoplay blocked:', playError);
                             showAlert('Click play to start music', 'error');
@@ -1596,7 +1600,7 @@
 
                             audioElement.onended = songFinished;
 
-                            if (data.playing && audioElement.paused) {
+                            if (data.playing && audioElement.paused && isPlayer()) {
                                 audioElement.play().catch(e => console.log('Autoplay blocked:', e));
                             }
                         }
@@ -1919,7 +1923,9 @@
                     document.getElementById('musicPlayer').style.display = 'block';
 
                     try {
-                        await audioElement.play();
+                        if (isPlayer()) {
+                            await audioElement.play();
+                        }
                         document.getElementById('playPauseBtn').innerHTML = '⏸️';
                         isPlaying = true;
                         audioElement.onended = songFinished;
