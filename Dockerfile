@@ -32,5 +32,13 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
+# Create entrypoint script
+RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
+    echo 'mkdir -p /app/database' >> /app/entrypoint.sh && \
+    echo 'chown -R node:node /app/database' >> /app/entrypoint.sh && \
+    echo 'exec "$@"' >> /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
+
 # Clear votes on startup and run the application
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["sh", "-c", "node clear_votes.js && npm start"]

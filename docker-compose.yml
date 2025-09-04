@@ -53,6 +53,8 @@ services:
 
 volumes:
   jukebox_db:
+    driver_opts:
+      o: uid=1000,gid=1000
 
 networks:
   jukebox_network:
