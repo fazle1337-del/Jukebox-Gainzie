@@ -1550,7 +1550,7 @@
             if (!currentSong) {
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/song-finished', {
                     method: 'POST',
@@ -1559,14 +1559,19 @@
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 if (response.ok) {
                     currentSong = null;
                     isPlaying = false;
                     document.getElementById('musicPlayer').style.display = 'none';
-                    
+
+                    // Refresh user votes and song list to reset vote buttons
+                    if (canVote()) {
+                        await loadUserVotes();
+                    }
+                    loadSongs();
                     loadPlaylist();
-                    
+
                     setTimeout(() => {
                         playNext();
                     }, 2000);
