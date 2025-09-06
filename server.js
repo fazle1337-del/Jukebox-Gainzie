@@ -28,7 +28,7 @@ let currentlyPlaying = {
 
 let playTimeout;
 
-// Database setup
+// Database setup with proper initialization order
 const dbPath = './database/jukebox.db';
 
 // Create directories if they don't exist
@@ -47,72 +47,101 @@ const db = new sqlite3.Database(dbPath, (err) => {
   console.log('Connected to SQLite database');
 });
 
-// Create tables
-db.serialize(() => {
-  // Users table
-//  db.run(`DROP TABLE IF EXISTS users`);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      email TEXT,
-      password TEXT NOT NULL,
-      role TEXT DEFAULT 'user',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+// Initialize database with proper sequencing
+function initializeDatabase() {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      // Users table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT,
+          password TEXT NOT NULL,
+          role TEXT DEFAULT 'user',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating users table:', err);
+          return reject(err);
+        }
+        console.log('✅ Users table created/verified');
+      });
 
-  // Songs table
- // db.run(`DROP TABLE IF EXISTS songs`); 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS songs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      filename TEXT UNIQUE NOT NULL,
-      title TEXT NOT NULL,
-      artist TEXT DEFAULT 'Unknown Artist',
-      album TEXT DEFAULT 'Unknown Album',
-      duration INTEGER DEFAULT 0,
-      is_upload BOOLEAN DEFAULT FALSE,
-      uploaded_by INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (uploaded_by) REFERENCES users(id)
-    )
-  `);
+      // Songs table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS songs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          filename TEXT UNIQUE NOT NULL,
+          title TEXT NOT NULL,
+          artist TEXT DEFAULT 'Unknown Artist',
+          album TEXT DEFAULT 'Unknown Album',
+          duration INTEGER DEFAULT 0,
+          is_upload BOOLEAN DEFAULT FALSE,
+          uploaded_by INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (uploaded_by) REFERENCES users(id)
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating songs table:', err);
+          return reject(err);
+        }
+        console.log('✅ Songs table created/verified');
+      });
 
-  // Votes table
-  // db.run(`DROP TABLE IF EXISTS votes`); 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS votes ( 
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      song_id INTEGER NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
-      UNIQUE(user_id, song_id)
-    )
-  `);
+      // Votes table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS votes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          song_id INTEGER NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+          UNIQUE(user_id, song_id)
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating votes table:', err);
+          return reject(err);
+        }
+        console.log('✅ Votes table created/verified');
+        console.log('✅ All database tables created/verified');
+        resolve();
+      });
+    });
+  });
+}
 
-  console.log('Database tables created/verified');
-});
-
-// Create default accounts if they don't exist
+// Create default accounts with better error handling
 async function createDefaultAccounts() {
   return new Promise(async (resolve, reject) => {
     try {
+      console.log('🔍 Checking for default accounts...');
+
       // Check if any admin user exists
       const adminCheck = await new Promise((resolve, reject) => {
         db.get('SELECT COUNT(*) as adminCount FROM users WHERE role = ?', ['admin'], (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
+          if (err) {
+            console.error('Error checking admin users:', err);
+            reject(err);
+          } else {
+            resolve(row);
+          }
         });
       });
 
       // Check if any player user exists
       const playerCheck = await new Promise((resolve, reject) => {
         db.get('SELECT COUNT(*) as playerCount FROM users WHERE role = ?', ['player'], (err, row) => {
-          if (err) reject(err);
-          else resolve(row);
+          if (err) {
+            console.error('Error checking player users:', err);
+            reject(err);
+          } else {
+            resolve(row);
+          }
         });
       });
 
@@ -121,7 +150,7 @@ async function createDefaultAccounts() {
 
       // Create admin if none exists
       if (adminCheck.adminCount === 0) {
-        console.log('No admin user found. Creating default admin account...');
+        console.log('👑 Creating default admin account...');
 
         const adminHash = await bcrypt.hash('admin123', 10);
         await new Promise((resolve, reject) => {
@@ -129,24 +158,27 @@ async function createDefaultAccounts() {
             'INSERT INTO users (username, password, role, email, created_at) VALUES (?, ?, ?, ?, ?)',
             ['admin', adminHash, 'admin', 'admin@jukebox.local', new Date().toISOString()],
             function(err) {
-              if (err) reject(err);
-              else resolve();
+              if (err) {
+                console.error('Error creating admin user:', err);
+                reject(err);
+              } else {
+                console.log('✅ Default admin user created successfully!');
+                console.log('   Username: admin');
+                console.log('   Password: admin123');
+                console.log('   Role: admin');
+                adminCreated = true;
+                resolve();
+              }
             }
           );
         });
-
-        console.log('✅ Default admin user created successfully!');
-        console.log('   Username: admin');
-        console.log('   Password: admin123');
-        console.log('   Role: admin');
-        adminCreated = true;
       } else {
-        console.log(`Found ${adminCheck.adminCount} admin user(s). Skipping default admin creation.`);
+        console.log(`✅ Found ${adminCheck.adminCount} admin user(s). Skipping default admin creation.`);
       }
 
       // Create player if none exists
       if (playerCheck.playerCount === 0) {
-        console.log('No player user found. Creating default player account...');
+        console.log('🎧 Creating default player account...');
 
         const playerHash = await bcrypt.hash('player123', 10);
         await new Promise((resolve, reject) => {
@@ -154,19 +186,22 @@ async function createDefaultAccounts() {
             'INSERT INTO users (username, password, role, email, created_at) VALUES (?, ?, ?, ?, ?)',
             ['dj_player', playerHash, 'player', 'dj@jukebox.local', new Date().toISOString()],
             function(err) {
-              if (err) reject(err);
-              else resolve();
+              if (err) {
+                console.error('Error creating player user:', err);
+                reject(err);
+              } else {
+                console.log('✅ Default player user created successfully!');
+                console.log('   Username: dj_player');
+                console.log('   Password: player123');
+                console.log('   Role: player');
+                playerCreated = true;
+                resolve();
+              }
             }
           );
         });
-
-        console.log('✅ Default player user created successfully!');
-        console.log('   Username: dj_player');
-        console.log('   Password: player123');
-        console.log('   Role: player');
-        playerCreated = true;
       } else {
-        console.log(`Found ${playerCheck.playerCount} player user(s). Skipping default player creation.`);
+        console.log(`✅ Found ${playerCheck.playerCount} player user(s). Skipping default player creation.`);
       }
 
       // Show security warnings
@@ -180,7 +215,7 @@ async function createDefaultAccounts() {
 
       resolve();
     } catch (error) {
-      console.error('Error creating default accounts:', error);
+      console.error('❌ Error creating default accounts:', error);
       reject(error);
     }
   });
@@ -323,78 +358,82 @@ const requireUserOrAdmin = (req, res, next) => {
   });
 };
 
-// Scan music files function
+// Scan music files function with better error handling
 function scanMusicFiles() {
-  console.log('Scanning music files...');
-  const supportedFormats = ['.mp3', '.wav', '.flac', '.m4a', '.ogg'];
-  
-  // Scan music directory
-  if (fs.existsSync('./music')) {
-    const files = fs.readdirSync('./music');
-    
-    files.forEach(file => {
-      const ext = path.extname(file).toLowerCase();
-      if (supportedFormats.includes(ext)) {
-        // Check if song already exists
-        db.get('SELECT id FROM songs WHERE filename = ?', [file], (err, existingSong) => {
-          if (err) {
-            console.error('Database error:', err);
-            return;
-          }
-          
-          if (!existingSong) {
-            const title = path.basename(file, ext);
-            
-            db.run(
-              'INSERT INTO songs (filename, title, artist, album, is_upload) VALUES (?, ?, ?, ?, ?)',
-              [file, title, 'Unknown Artist', 'Unknown Album', false],
-              function(insertErr) {
-                if (insertErr) {
-                  console.error(`Error inserting ${file}:`, insertErr);
-                } else {
-                  console.log(`Added: ${title}`);
-                }
-              }
-            );
-          }
-        });
+  return new Promise((resolve, reject) => {
+    console.log('🎵 Scanning music files...');
+    const supportedFormats = ['.mp3', '.wav', '.flac', '.m4a', '.ogg'];
+    let filesProcessed = 0;
+    let filesAdded = 0;
+
+    // Function to process files from a directory
+    const processDirectory = async (dirPath, isUpload = false) => {
+      if (!fs.existsSync(dirPath)) {
+        console.log(`📁 Directory ${dirPath} doesn't exist, skipping...`);
+        return;
       }
-    });
-  }
-  
-  // Scan uploads directory
-  if (fs.existsSync('./uploads')) {
-    const files = fs.readdirSync('./uploads');
-    
-    files.forEach(file => {
-      const ext = path.extname(file).toLowerCase();
-      if (supportedFormats.includes(ext)) {
-        // Check if song already exists
-        db.get('SELECT id FROM songs WHERE filename = ?', [file], (err, existingSong) => {
-          if (err) {
-            console.error('Database error:', err);
-            return;
-          }
-          
-          if (!existingSong) {
-            const title = path.basename(file, ext);
-            
-            db.run(
-              'INSERT INTO songs (filename, title, artist, album, is_upload) VALUES (?, ?, ?, ?, ?)',
-              [file, title, 'Unknown Artist', 'Unknown Album', true],
-              function(insertErr) {
-                if (insertErr) {
-                  console.error(`Error inserting ${file}:`, insertErr);
-                } else {
-                  console.log(`Added upload: ${title}`);
-                }
+
+      const files = fs.readdirSync(dirPath);
+      const musicFiles = files.filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return supportedFormats.includes(ext);
+      });
+
+      console.log(`📁 Found ${musicFiles.length} music files in ${dirPath}`);
+
+      for (const file of musicFiles) {
+        try {
+          await new Promise((resolve, reject) => {
+            // Check if song already exists
+            db.get('SELECT id FROM songs WHERE filename = ?', [file], (err, existingSong) => {
+              if (err) {
+                console.error('Database error:', err);
+                filesProcessed++;
+                return resolve();
               }
-            );
-          }
-        });
+
+              if (!existingSong) {
+                const title = path.basename(file, path.extname(file));
+
+                db.run(
+                  'INSERT INTO songs (filename, title, artist, album, is_upload) VALUES (?, ?, ?, ?, ?)',
+                  [file, title, 'Unknown Artist', 'Unknown Album', isUpload],
+                  function(insertErr) {
+                    if (insertErr) {
+                      console.error(`❌ Error inserting ${file}:`, insertErr);
+                    } else {
+                      console.log(`✅ Added: ${title}`);
+                      filesAdded++;
+                    }
+                    filesProcessed++;
+                    resolve();
+                  }
+                );
+              } else {
+                filesProcessed++;
+                resolve();
+              }
+            });
+          });
+        } catch (error) {
+          console.error(`Error processing file ${file}:`, error);
+          filesProcessed++;
+        }
       }
+    };
+
+    // Process both directories
+    Promise.all([
+      processDirectory('./music', false),
+      processDirectory('./uploads', true)
+    ]).then(() => {
+      console.log(`🎵 Music scan completed: ${filesAdded} files added`);
+      resolve();
+    }).catch(error => {
+      console.error('Error scanning music files:', error);
+      reject(error);
     });
-  }
+  });
 }
 
 // Function to play next song in playlist
@@ -1223,54 +1262,87 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint not found' });
 });
 
-// Initialize and start server
-console.log('🎵 Starting Jukebox server...');
+// Initialize and start server with proper sequencing
+async function startServer() {
+  console.log('🎵 Starting Jukebox server...');
 
-// Create default accounts if needed, then start server
-createDefaultAccounts()
-  .then(() => {
-    console.log('✅ Default accounts check completed.');
+  try {
+    // Step 1: Initialize database tables
+    await initializeDatabase();
+    console.log('✅ Database initialization completed');
 
-    // Scan for music files
-    setTimeout(() => {
-      scanMusicFiles();
-    }, 1000);
+    // Step 2: Create default accounts
+    await createDefaultAccounts();
+    console.log('✅ Default accounts setup completed');
 
+    // Step 3: Scan music files
+    await scanMusicFiles();
+    console.log('✅ Music file scanning completed');
+
+    // Step 4: Start the server
     app.listen(PORT, '0.0.0.0', () => {
+      console.log('');
+      console.log('🎉 SERVER STARTED SUCCESSFULLY!');
       console.log(`🎵 Jukebox server running on port ${PORT}`);
       console.log(`🌐 Access at: http://localhost:${PORT}`);
       console.log(`📁 Music directory: ./music`);
       console.log(`📤 Uploads directory: ./uploads`);
       console.log(`🗄️ Database: ${dbPath}`);
       console.log('');
-      console.log('🚀 Server ready! Access the application at the URL above.');
-      console.log('👥 Default accounts created:');
+      console.log('👥 Default accounts:');
       console.log('   👑 Admin:  admin / admin123');
       console.log('   🎧 Player: dj_player / player123');
       console.log('   ⚠️  IMPORTANT: Change default passwords after login!');
+      console.log('');
+      console.log('🚀 Ready to rock! 🎸');
     });
-  })
-  .catch((error) => {
-    console.error('❌ Failed to initialize admin user:', error);
-    console.log('🔄 Attempting to start server anyway...');
 
-    // Still try to start the server even if admin creation fails
-    setTimeout(() => {
-      scanMusicFiles();
-    }, 1000);
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    console.error('💡 This usually happens when:');
+    console.error('   - Database permissions are incorrect');
+    console.error('   - Required directories cannot be created');
+    console.error('   - Port is already in use');
+    console.error('');
+    console.error('🔧 Try these fixes:');
+    console.error('   - Check file permissions on ./database directory');
+    console.error('   - Ensure port 3000 is available');
+    console.error('   - Run: docker-compose down && docker-compose up --build');
+    process.exit(1);
+  }
+}
 
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🎵 Jukebox server running on port ${PORT} (with warnings)`);
-      console.log(`🌐 Access at: http://localhost:${PORT}`);
-    });
-  });
+// Start the server
+startServer();
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\nShutting down gracefully...');
+  console.log('\n🔄 Shutting down gracefully...');
+  if (playTimeout) {
+    clearTimeout(playTimeout);
+  }
   db.close((err) => {
-    if (err) console.error('Error closing database:', err);
-    else console.log('Database connection closed');
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('✅ Database connection closed');
+    }
+    console.log('👋 Goodbye!');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n🔄 Received SIGTERM, shutting down gracefully...');
+  if (playTimeout) {
+    clearTimeout(playTimeout);
+  }
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err);
+    } else {
+      console.log('✅ Database connection closed');
+    }
     process.exit(0);
   });
 });
