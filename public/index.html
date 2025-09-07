@@ -1605,19 +1605,19 @@
                     
                     if (data.song) {
                         currentSong = data.song;
-                    const audioElement = document.getElementById('audioElement');
-                        audioElement.src = data.streamUrl;
+                        setTimeout(() => {
+                            const audioElement = document.getElementById('audioElement');
+                            audioElement.src = data.streamUrl;
 
-                        document.getElementById('currentTitle').textContent = data.song.title;
-                        document.getElementById('currentArtist').textContent = data.song.artist;
-                        document.getElementById('musicPlayer').style.display = 'block';
+                            document.getElementById('currentTitle').textContent = data.song.title;
+                            document.getElementById('currentArtist').textContent = data.song.artist;
+                            document.getElementById('musicPlayer').style.display = 'block';
 
-                        // Resume audio context when source changes
-                        if (audioContext && audioContext.state === 'suspended') {
-                            audioContext.resume();
-                        }
-                            }, 100); // Small delay to ensure audio element is ready
-                        }
+                            // Resume audio context when source changes
+                            if (audioContext && audioContext.state === 'suspended') {
+                                audioContext.resume();
+                            }
+                        }, 100); // Small delay to ensure audio element is ready
                         
                         try {
                             if (isPlayer()) {
