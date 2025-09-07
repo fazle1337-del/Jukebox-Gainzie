@@ -1715,12 +1715,36 @@
                             songFinished();
                         };
 
+                        // Also handle error case - if audio fails to load, we should still progress
+                        audioElement.onerror = (e) => {
+                            console.error('❌ Audio error in playNext:', {
+                                error: e,
+                                target: e.target,
+                                src: e.target.src,
+                                errorCode: e.target.error ? e.target.error.code : 'unknown',
+                                errorMessage: e.target.error ? e.target.error.message : 'unknown'
+                            });
+                            // If audio fails to load, still call songFinished after a short delay
+                            setTimeout(() => {
+                                console.log('⏭️ Audio failed to load, calling songFinished anyway');
+                                songFinished();
+                            }, 1000);
+                        };
+
                         // Add additional event listeners for debugging
                         audioElement.onloadeddata = () => console.log('📊 Audio loaded');
                         audioElement.oncanplay = () => console.log('▶️ Audio can play');
                         audioElement.onplay = () => console.log('▶️ Audio started playing');
                         audioElement.onpause = () => console.log('⏸️ Audio paused');
-                        audioElement.onerror = (e) => console.error('❌ Audio error:', e);
+                        audioElement.onerror = (e) => {
+                            console.error('❌ Audio error:', {
+                                error: e,
+                                target: e.target,
+                                src: e.target.src,
+                                errorCode: e.target.error ? e.target.error.code : 'unknown',
+                                errorMessage: e.target.error ? e.target.error.message : 'unknown'
+                            });
+                        };
 
                         try {
                             if (isPlayer()) {
@@ -1898,12 +1922,36 @@
                                 songFinished();
                             };
 
+                            // Handle error case
+                            audioElement.onerror = (e) => {
+                                console.error('❌ Audio error in checkPlayingStatus:', {
+                                    error: e,
+                                    target: e.target,
+                                    src: e.target.src,
+                                    errorCode: e.target.error ? e.target.error.code : 'unknown',
+                                    errorMessage: e.target.error ? e.target.error.message : 'unknown'
+                                });
+                                // If audio fails to load, still call songFinished after a short delay
+                                setTimeout(() => {
+                                    console.log('⏭️ Audio failed to load (checkPlayingStatus), calling songFinished anyway');
+                                    songFinished();
+                                }, 1000);
+                            };
+
                             // Add additional event listeners for debugging
                             audioElement.onloadeddata = () => console.log('📊 Audio loaded (from checkPlayingStatus)');
                             audioElement.oncanplay = () => console.log('▶️ Audio can play (from checkPlayingStatus)');
                             audioElement.onplay = () => console.log('▶️ Audio started playing (from checkPlayingStatus)');
                             audioElement.onpause = () => console.log('⏸️ Audio paused (from checkPlayingStatus)');
-                            audioElement.onerror = (e) => console.error('❌ Audio error (from checkPlayingStatus):', e);
+                            audioElement.onerror = (e) => {
+                                console.error('❌ Audio error (from checkPlayingStatus):', {
+                                    error: e,
+                                    target: e.target,
+                                    src: e.target.src,
+                                    errorCode: e.target.error ? e.target.error.code : 'unknown',
+                                    errorMessage: e.target.error ? e.target.error.message : 'unknown'
+                                });
+                            };
 
                               if (data.playing && audioElement.paused && isPlayer()) {
                                   console.log('▶️ Auto-playing song from checkPlayingStatus...');
