@@ -475,7 +475,8 @@ function playNextSong(callback) {
     callback(song);
 
     // Set timeout for next song (but let frontend handle progression)
-    if (song.duration) {
+    if (song.duration && song.duration > 0) {
+      console.log(`⏰ Setting server timeout for song ${song.id} (${song.title}) - duration: ${song.duration}s`);
       playTimeout = setTimeout(() => {
         console.log('⏰ Server timeout reached for song progression - resetting player state');
         // Don't automatically play next song, let frontend handle it
@@ -487,6 +488,8 @@ function playNextSong(callback) {
           pausedAt: null
         };
       }, song.duration * 1000);
+    } else {
+      console.log(`⚠️ Song ${song.id} has no duration or duration is 0`);
     }
   });
 }
@@ -856,12 +859,15 @@ app.get('/api/now-playing', (req, res) => {
   
   db.get(query, [currentlyPlaying.songId], (err, song) => {
     if (err || !song) {
+      console.log('⚠️ Song not found for /api/now-playing');
       return res.json({ playing: false });
     }
-    
+
+    console.log(`📊 /api/now-playing: song ${song.id}, duration: ${song.duration}, title: ${song.title}`);
+
     const now = Date.now();
     let currentTime = 0;
-    
+
     if (currentlyPlaying.startTime) {
       if (currentlyPlaying.pausedAt) {
         currentTime = Math.floor((currentlyPlaying.pausedAt - currentlyPlaying.startTime) / 1000);
@@ -869,8 +875,9 @@ app.get('/api/now-playing', (req, res) => {
         currentTime = Math.floor((now - currentlyPlaying.startTime) / 1000);
       }
     }
-    
+
     const remainingTime = Math.max(0, (song.duration || 0) - currentTime);
+    console.log(`⏱️ Time info: current=${currentTime}, remaining=${remainingTime}, duration=${song.duration}`);
     
     res.json({
       playing: currentlyPlaying.isPlaying,
@@ -979,11 +986,14 @@ app.post('/api/skip', requirePlayerOrAdmin, (req, res) => {
 
 // Song finished
 app.post('/api/song-finished', requirePlayerOrAdmin, (req, res) => {
+  console.log('🎵 /api/song-finished called by user:', req.user.username);
   if (!currentlyPlaying.songId) {
+    console.log('⚠️ No song currently playing');
     return res.json({ error: 'Nothing currently playing' });
   }
 
   const songId = currentlyPlaying.songId;
+  console.log(`🎵 Song ${songId} finished`);
 
   // Clear timeout
   if (playTimeout) {

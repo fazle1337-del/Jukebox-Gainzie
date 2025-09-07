@@ -1451,7 +1451,13 @@
 
             const parsedSongId = parseInt(songId);
             const wasVoted = userVotes.includes(parsedSongId);
-            console.log('🗳️ toggleVote called:', { songId: parsedSongId, wasVoted, currentUserVotes: [...userVotes] });
+            console.log('🗳️ toggleVote called:', {
+                songId: parsedSongId,
+                wasVoted,
+                currentUserVotes: [...userVotes],
+                includesCheck: userVotes.includes(parsedSongId),
+                userVotesContents: userVotes
+            });
 
             try {
                 const response = await fetch('/api/vote', {
@@ -1467,9 +1473,16 @@
 
                 if (response.ok) {
                     // Vote was added successfully
+                    console.log('📊 Response OK - checking userVotes before update:', {
+                        parsedSongId,
+                        userVotes: [...userVotes],
+                        includes: userVotes.includes(parsedSongId)
+                    });
                     if (!userVotes.includes(parsedSongId)) {
                         userVotes.push(parsedSongId);
                         console.log('✅ Vote added locally:', { songId: parsedSongId, newUserVotes: [...userVotes] });
+                    } else {
+                        console.log('⚠️ Vote already in local state, not adding again');
                     }
                     showAlert('Vote added!', 'success');
                     // Update UI immediately
@@ -1696,6 +1709,7 @@
 
                         // Always set the onended event handler
                         const audioElement = document.getElementById('audioElement');
+                        console.log('🎵 Setting up audio onended handler for playNext');
                         audioElement.onended = () => {
                             console.log('🎵 Audio element ended, calling songFinished');
                             songFinished();
@@ -1878,6 +1892,7 @@
                             document.getElementById('currentTitle').textContent = data.song.title;
                             document.getElementById('currentArtist').textContent = data.song.artist;
 
+                            console.log('🎵 Setting up audio onended handler for checkPlayingStatus');
                             audioElement.onended = () => {
                                 console.log('🎵 Audio element ended (from checkPlayingStatus), calling songFinished');
                                 songFinished();
