@@ -972,11 +972,7 @@
         let isPlaying = false;
         let userVotes = [];
 
-        // Audio visualizer variables
-        let audioContext = null;
-        let analyser = null;
-        let dataArray = null;
-        let animationId = null;
+        // Audio visualizer variables (global declarations)
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -2073,17 +2069,18 @@
                     document.getElementById('currentTitle').textContent = data.song.title;
                     document.getElementById('currentArtist').textContent = data.song.artist;
 
-                    // Reconnect AudioMotion when source changes
-                    if (audioMotion && document.getElementById('audioMotionContainer').style.display !== 'none') {
-                        console.log('Reconnecting AudioMotion after force play');
-                        setTimeout(() => {
-                            try {
-                                audioMotion.connectInput(audioElement);
-                            } catch (e) {
-                                console.error('Error reconnecting AudioMotion:', e);
-                            }
-                        }, 100);
-                    }
+                     // Reconnect audio visualizer when source changes
+                     if (audioContext && document.getElementById('audioMotionContainer').style.display !== 'none') {
+                         console.log('Reconnecting audio visualizer after force play');
+                         setTimeout(() => {
+                             try {
+                                 // Reinitialize audio visualizer for new source
+                                 initializeAudioVisualizer();
+                             } catch (e) {
+                                 console.error('Error reconnecting audio visualizer:', e);
+                             }
+                         }, 100);
+                     }
 
                     // Show player for admin when force playing
                     document.getElementById('musicPlayer').style.display = 'block';
