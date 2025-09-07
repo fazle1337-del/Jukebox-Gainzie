@@ -661,6 +661,12 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* AudioMotion Canvas */
+        #audioMotionCanvas {
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
         /* Utility Classes */
         .hidden {
             display: none;
@@ -827,6 +833,9 @@
             <div id="playlistTab" class="tab-content">
                 <div class="card">
                     <h2 style="margin-bottom: 1.5rem;">Current Playlist</h2>
+                    <div id="audioMotionContainer" style="display: none; margin-bottom: 1.5rem;">
+                        <canvas id="audioMotionCanvas" style="width: 100%; height: 200px; background: #000;"></canvas>
+                    </div>
                     <div id="playlistContainer">
                         <!-- Playlist will be loaded here -->
                     </div>
@@ -953,6 +962,7 @@
         <audio id="audioElement" preload="metadata"></audio>
     </div>
 
+    <script src="https://raw.githubusercontent.com/hvianna/audioMotion.js/master/public/audioMotion.js"></script>
     <script>
         // Global variables
         let currentUser = null;
@@ -962,6 +972,7 @@
         let currentSong = null;
         let isPlaying = false;
         let userVotes = [];
+        let audioMotion = null;
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -1049,6 +1060,7 @@
                     loadSongs();
                 } else if (tabName === 'playlist') {
                     loadPlaylist();
+                    updateAudioMotionVisibility();
                 }
             }
         }
@@ -1224,6 +1236,9 @@
 
             // Show role-specific message
             updateRoleMessage();
+
+            // Update AudioMotion visibility
+            updateAudioMotionVisibility();
         }
 
         function updateRoleMessage() {
@@ -1237,6 +1252,55 @@
                 `;
             } else {
                 roleMessage.innerHTML = '';
+            }
+        }
+
+        // AudioMotion functions
+        function updateAudioMotionVisibility() {
+            const container = document.getElementById('audioMotionContainer');
+            const canvas = document.getElementById('audioMotionCanvas');
+
+            if (isPlayer() && document.getElementById('playlistTab').classList.contains('active')) {
+                container.style.display = 'block';
+                if (!audioMotion) {
+                    initializeAudioMotion();
+                }
+            } else {
+                container.style.display = 'none';
+                if (audioMotion) {
+                    audioMotion.disconnectInput();
+                    audioMotion = null;
+                }
+            }
+        }
+
+        function initializeAudioMotion() {
+            const canvas = document.getElementById('audioMotionCanvas');
+            const audioElement = document.getElementById('audioElement');
+
+            if (!canvas || !audioElement) return;
+
+            try {
+                audioMotion = new AudioMotionAnalyzer(canvas, {
+                    source: audioElement,
+                    mode: 3, // bars
+                    fftSize: 8192,
+                    minFreq: 20,
+                    maxFreq: 22000,
+                    smoothing: 0.8,
+                    gradient: 'rainbow',
+                    showBgColor: true,
+                    bgAlpha: 0.7,
+                    overlay: true,
+                    showPeaks: true,
+                    showScaleX: false,
+                    showScaleY: false,
+                    height: 200
+                });
+
+                console.log('AudioMotion initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize AudioMotion:', error);
             }
         }
 
@@ -1439,16 +1503,20 @@
                     const playPauseBtn = document.getElementById('playPauseBtn');
                     
                      if (data.playing) {
-                         if (isPlayer()) {
-                             audioElement.play();
-                         }
-                         playPauseBtn.innerHTML = '⏸️';
-                         isPlaying = true;
-                     } else {
-                         audioElement.pause();
-                         playPauseBtn.innerHTML = '▶️';
-                         isPlaying = false;
-                     }
+                          if (isPlayer()) {
+                              audioElement.play();
+                              // Connect AudioMotion if it's initialized
+                              if (audioMotion) {
+                                  audioMotion.connectInput(audioElement);
+                              }
+                          }
+                          playPauseBtn.innerHTML = '⏸️';
+                          isPlaying = true;
+                      } else {
+                          audioElement.pause();
+                          playPauseBtn.innerHTML = '▶️';
+                          isPlaying = false;
+                      }
                 }
             } catch (error) {
                 console.error('Error toggling playback:', error);
@@ -1485,6 +1553,10 @@
                         try {
                             if (isPlayer()) {
                                 await audioElement.play();
+                                // Connect AudioMotion if it's initialized
+                                if (audioMotion) {
+                                    audioMotion.connectInput(audioElement);
+                                }
                             }
                             document.getElementById('playPauseBtn').innerHTML = '⏸️';
                             isPlaying = true;
@@ -1605,9 +1677,13 @@
 
                             audioElement.onended = songFinished;
 
-                            if (data.playing && audioElement.paused && isPlayer()) {
-                                audioElement.play().catch(e => console.log('Autoplay blocked:', e));
-                            }
+                             if (data.playing && audioElement.paused && isPlayer()) {
+                                 audioElement.play().catch(e => console.log('Autoplay blocked:', e));
+                                 // Connect AudioMotion if it's initialized
+                                 if (audioMotion) {
+                                     audioMotion.connectInput(audioElement);
+                                 }
+                             }
                         }
 
                         isPlaying = data.playing;
