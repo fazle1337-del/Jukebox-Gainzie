@@ -1309,7 +1309,7 @@
 
                 // Create analyser
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 240;
+                analyser.fftSize = 512;
                 analyser.smoothingTimeConstant = 0.8;
 
                 // Create data array
@@ -1349,7 +1349,7 @@
             ctx.fillRect(0, 0, width, height);
 
             // Draw bars
-            const barWidth = width / dataArray.length * 2.5;
+            const barWidth = width / dataArray.length * 1.2;
             let barHeight;
             let x = 0;
 
