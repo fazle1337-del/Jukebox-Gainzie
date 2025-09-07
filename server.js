@@ -474,10 +474,18 @@ function playNextSong(callback) {
 
     callback(song);
 
-    // Set timeout for next song
+    // Set timeout for next song (but let frontend handle progression)
     if (song.duration) {
       playTimeout = setTimeout(() => {
-        playNextSong(() => {});
+        console.log('⏰ Server timeout reached for song progression - resetting player state');
+        // Don't automatically play next song, let frontend handle it
+        currentlyPlaying = {
+          songId: null,
+          startTime: null,
+          duration: null,
+          isPlaying: false,
+          pausedAt: null
+        };
       }, song.duration * 1000);
     }
   });
@@ -876,12 +884,15 @@ app.get('/api/now-playing', (req, res) => {
 });
 
 // Start playing next song
-app.post('/api/play-next', requirePlayerOrAdmin, (req, res) => { //red curly bracket
-  playNextSong((song) => {    
+app.post('/api/play-next', requirePlayerOrAdmin, (req, res) => {
+  console.log('⏭️ /api/play-next called by user:', req.user.username);
+  playNextSong((song) => {
     if (!song) {
+      console.log('❌ No songs in playlist');
       return res.json({ error: 'No songs in playlist' });
     }
-    
+
+    console.log('✅ Playing next song:', { id: song.id, title: song.title, artist: song.artist });
     res.json({
       message: 'Now playing',
       song: song,
@@ -976,6 +987,7 @@ app.post('/api/song-finished', requirePlayerOrAdmin, (req, res) => {
 
   // Clear timeout
   if (playTimeout) {
+    console.log('⏰ Clearing existing play timeout');
     clearTimeout(playTimeout);
     playTimeout = null;
   }
@@ -999,6 +1011,7 @@ app.post('/api/song-finished', requirePlayerOrAdmin, (req, res) => {
        pausedAt: null
      };
 
+     console.log('🎵 Player state reset after song finished');
      res.json({ message: `Song finished, ${this.changes} votes removed` });
    });
 });

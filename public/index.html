@@ -975,7 +975,7 @@
         // Audio visualizer variables (global declarations)
 
         // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // Check for existing auth token
             const savedToken = localStorage.getItem('token');
             const savedUser = localStorage.getItem('user');
@@ -983,7 +983,7 @@
             if (savedToken && savedUser) {
                 authToken = savedToken;
                 currentUser = JSON.parse(savedUser);
-                showAppSection();
+                await showAppSection();
                 loadSongs();
                 loadPlaylist();
                 checkPlayingStatus();
@@ -1106,7 +1106,7 @@
                     localStorage.setItem('user', JSON.stringify(currentUser));
                     
                     showAlert('Login successful!', 'success');
-                    showAppSection();
+                    await showAppSection();
                     loadSongs();
                     loadPlaylist();
                 } else {
@@ -1143,7 +1143,7 @@
                     localStorage.setItem('user', JSON.stringify(currentUser));
                     
                     showAlert('Registration successful!', 'success');
-                    showAppSection();
+                    await showAppSection();
                     loadSongs();
                     loadPlaylist();
                 } else {
@@ -1175,11 +1175,13 @@
         // New function to load user's votes
         async function loadUserVotes() {
             if (!authToken) {
+                console.log('🔐 No auth token, clearing userVotes');
                 userVotes = [];
                 return;
             }
 
             try {
+                console.log('📊 Loading user votes...');
                 const response = await fetch('/api/my-votes', {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
@@ -1191,18 +1193,27 @@
                     const oldVotes = [...userVotes]; // Store old state for debugging
                     // Ensure all IDs are integers and remove duplicates
                     userVotes = [...new Set(data.votedSongs.map(id => parseInt(id)))];
-                    console.log('User votes updated:', { old: oldVotes, new: userVotes });
+                    console.log('✅ User votes updated:', {
+                        old: oldVotes,
+                        new: userVotes,
+                        changes: oldVotes.length !== userVotes.length,
+                        added: userVotes.filter(id => !oldVotes.includes(id)),
+                        removed: oldVotes.filter(id => !userVotes.includes(id))
+                    });
+
+                    // Update all vote buttons after loading votes
+                    updateAllVoteButtons();
                 } else {
-                    console.error('Failed to load user votes');
+                    console.error('❌ Failed to load user votes:', response.status);
                     userVotes = [];
                 }
             } catch (error) {
-                console.error('Error loading user votes:', error);
+                console.error('❌ Error loading user votes:', error);
                 userVotes = [];
             }
         }
 
-        function showAppSection() {
+        async function showAppSection() {
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('appSection').classList.remove('hidden');
 
@@ -1234,7 +1245,7 @@
 
             // Load user's votes if they can vote
             if (canVote()) {
-                loadUserVotes();
+                await loadUserVotes();
             }
 
             // Show role-specific message
@@ -1372,18 +1383,23 @@
         // Songs functions
         async function loadSongs() {
             try {
+                console.log('📡 Loading songs from server...');
                 const response = await fetch('/api/songs');
                 const data = await response.json();
 
                 if (response.ok) {
                     songs = data;
+                    console.log('✅ Songs loaded:', songs.length, 'songs');
                     displaySongs(songs);
                     checkPlayingStatus(); // Update player status after songs load
+                    return true; // Indicate success
                 } else {
-                    console.error('Failed to load songs:', data.error);
+                    console.error('❌ Failed to load songs:', data.error);
+                    return false;
                 }
             } catch (error) {
-                console.error('Error loading songs:', data.error);
+                console.error('❌ Error loading songs:', error);
+                return false;
             }
         }
 
@@ -1399,6 +1415,7 @@
             container.innerHTML = songsToShow.map(song => {
                 const songId = parseInt(song.id);
                 const isVoted = userVotes.includes(songId);
+                console.log(`🎵 Rendering song ${songId} (${song.title}): isVoted=${isVoted}`);
                 return `
                 <div class="song-card">
                     <div class="song-title">${escapeHtml(song.title)}</div>
@@ -1410,7 +1427,7 @@
                     <div class="vote-section">
                         <span class="vote-count">${song.votes} votes</span>
                         ${canVote() ? `
-                            <button class="vote-btn ${isVoted ? 'voted' : ''}" onclick="toggleVote(${songId})">
+                            <button class="vote-btn ${isVoted ? 'voted' : ''}" onclick="toggleVote(${songId})" data-song-id="${songId}">
                                 ${isVoted ? '🗳️ Voted' : '👍 Vote'}
                             </button>
                         ` : `
@@ -1421,6 +1438,9 @@
                     </div>
                 </div>
             `}).join('');
+
+            // After rendering, update all vote buttons to ensure consistency
+            setTimeout(() => updateAllVoteButtons(), 100);
         }
 
         async function toggleVote(songId) {
@@ -1428,7 +1448,11 @@
                 showAlert('Voting not available for your account type', 'error');
                 return;
             }
-            
+
+            const parsedSongId = parseInt(songId);
+            const wasVoted = userVotes.includes(parsedSongId);
+            console.log('🗳️ toggleVote called:', { songId: parsedSongId, wasVoted, currentUserVotes: [...userVotes] });
+
             try {
                 const response = await fetch('/api/vote', {
                     method: 'POST',
@@ -1438,19 +1462,22 @@
                     },
                     body: JSON.stringify({ songId })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
-                    // Add vote only if not already voted
-                    const parsedSongId = parseInt(songId);
+                    // Vote was added successfully
                     if (!userVotes.includes(parsedSongId)) {
                         userVotes.push(parsedSongId);
+                        console.log('✅ Vote added locally:', { songId: parsedSongId, newUserVotes: [...userVotes] });
                     }
                     showAlert('Vote added!', 'success');
+                    // Update UI immediately
+                    updateVoteButton(parsedSongId);
                     loadSongs();
                     loadPlaylist();
                 } else if (response.status === 409) {
+                    console.log('🔄 Vote conflict detected, removing vote...');
                     // Remove vote
                     const removeResponse = await fetch(`/api/vote/${songId}`, {
                         method: 'DELETE',
@@ -1460,17 +1487,30 @@
                     });
 
                     if (removeResponse.ok) {
-                        const parsedSongId = parseInt(songId);
                         userVotes = userVotes.filter(id => id !== parsedSongId);
+                        console.log('✅ Vote removed locally:', { songId: parsedSongId, newUserVotes: [...userVotes] });
                         showAlert('Vote removed!', 'success');
+                        // Update UI immediately
+                        updateVoteButton(parsedSongId);
                         loadSongs();
                         loadPlaylist();
+                    } else {
+                        console.error('❌ Failed to remove vote:', removeResponse.status);
+                        // Refresh user votes to ensure consistency
+                        if (canVote()) {
+                            await loadUserVotes();
+                        }
                     }
                 } else {
+                    console.error('❌ Voting failed:', data.error);
                     showAlert(data.error || 'Voting failed', 'error');
+                    // Refresh user votes to ensure consistency
+                    if (canVote()) {
+                        await loadUserVotes();
+                    }
                 }
             } catch (error) {
-                console.error('Voting error:', error);
+                console.error('❌ Voting error:', error);
                 showAlert('Connection error. Please try again.', 'error');
             }
         }
@@ -1493,18 +1533,23 @@
         // Playlist functions
         async function loadPlaylist() {
             try {
+                console.log('📡 Loading playlist from server...');
                 const response = await fetch('/api/playlist');
                 const data = await response.json();
 
                 if (response.ok) {
                     playlist = data;
+                    console.log('✅ Playlist loaded:', playlist.length, 'songs');
                     displayPlaylist(playlist);
                     checkPlayingStatus(); // Update player status after playlist load
+                    return true; // Indicate success
                 } else {
-                    console.error('Failed to load playlist:', data.error);
+                    console.error('❌ Failed to load playlist:', data.error);
+                    return false;
                 }
             } catch (error) {
-                console.error('Error loading playlist:', error);
+                console.error('❌ Error loading playlist:', error);
+                return false;
             }
         }
 
@@ -1602,8 +1647,15 @@
                 showAlert('Player controls not available for your account type', 'error');
                 return;
             }
-            
+
+            console.log('⏭️ playNext() called:', {
+                currentSong: currentSong ? { id: currentSong.id, title: currentSong.title } : null,
+                isPlaying,
+                userVotes: [...userVotes]
+            });
+
             try {
+                console.log('📡 Calling /api/play-next...');
                 const response = await fetch('/api/play-next', {
                     method: 'POST',
                     headers: {
@@ -1611,12 +1663,23 @@
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
-                    
+                    console.log('✅ play-next response:', {
+                        hasSong: !!data.song,
+                        song: data.song ? { id: data.song.id, title: data.song.title } : null,
+                        streamUrl: data.streamUrl
+                    });
+
                     if (data.song) {
                         currentSong = data.song;
+                        console.log('🎵 Setting up new song:', {
+                            songId: data.song.id,
+                            title: data.song.title,
+                            artist: data.song.artist
+                        });
+
                         setTimeout(() => {
                             const audioElement = document.getElementById('audioElement');
                             audioElement.src = data.streamUrl;
@@ -1630,15 +1693,24 @@
                                 audioContext.resume();
                             }
                         }, 100); // Small delay to ensure audio element is ready
-                        
+
                         // Always set the onended event handler
+                        const audioElement = document.getElementById('audioElement');
                         audioElement.onended = () => {
                             console.log('🎵 Audio element ended, calling songFinished');
                             songFinished();
                         };
 
+                        // Add additional event listeners for debugging
+                        audioElement.onloadeddata = () => console.log('📊 Audio loaded');
+                        audioElement.oncanplay = () => console.log('▶️ Audio can play');
+                        audioElement.onplay = () => console.log('▶️ Audio started playing');
+                        audioElement.onpause = () => console.log('⏸️ Audio paused');
+                        audioElement.onerror = (e) => console.error('❌ Audio error:', e);
+
                         try {
                             if (isPlayer()) {
+                                console.log('▶️ Starting audio playback...');
                                 await audioElement.play();
                                 // Resume audio context if needed
                                 if (audioContext && audioContext.state === 'suspended') {
@@ -1647,19 +1719,23 @@
                             }
                             document.getElementById('playPauseBtn').innerHTML = '⏸️';
                             isPlaying = true;
+                            console.log('✅ Playback started successfully');
 
                         } catch (playError) {
-                            console.error('Autoplay blocked:', playError);
+                            console.error('❌ Autoplay blocked:', playError);
                             showAlert('Click play to start music', 'error');
                         }
-                        
+
                         loadPlaylist();
                     } else {
+                        console.log('❌ No songs in playlist');
                         showAlert(data.error || 'No songs in playlist', 'error');
                     }
+                } else {
+                    console.error('❌ play-next failed:', response.status, await response.text());
                 }
             } catch (error) {
-                console.error('Error playing next song:', error);
+                console.error('❌ Error playing next song:', error);
             }
         }
 
@@ -1724,9 +1800,15 @@
 
             // Store the finished song ID for later reference
             const finishedSongId = parseInt(currentSong.id);
-            console.log('🎵 Song finished:', { songId: finishedSongId, currentUserVotes: [...userVotes] });
+            console.log('🎵 Song finished:', {
+                songId: finishedSongId,
+                songTitle: currentSong.title,
+                currentUserVotes: [...userVotes],
+                userHasVoted: userVotes.includes(finishedSongId)
+            });
 
             try {
+                console.log('📡 Calling /api/song-finished...');
                 const response = await fetch('/api/song-finished', {
                     method: 'POST',
                     headers: {
@@ -1742,36 +1824,50 @@
                     isPlaying = false;
                     document.getElementById('musicPlayer').style.display = 'none';
 
-                    // Refresh user votes and song list to reset vote buttons
+                    // Refresh user votes first, then update UI
                     if (canVote()) {
+                        console.log('🔄 Refreshing user votes after song finished...');
                         await loadUserVotes();
                     }
 
                     // Re-render songs and playlist with updated vote states
-                    loadSongs();
-                    loadPlaylist();
+                    console.log('🔄 Re-rendering songs and playlist...');
+                    await loadSongs();
+                    await loadPlaylist();
 
+                    console.log('⏭️ Scheduling next song in 2 seconds...');
                     setTimeout(() => {
+                        console.log('🚀 Calling playNext() after song finished...');
                         playNext();
                     }, 2000);
+                } else {
+                    console.error('❌ Server error on song-finished:', response.status, await response.text());
                 }
             } catch (error) {
-                console.error('Error handling song end:', error);
+                console.error('❌ Error handling song end:', error);
             }
         }
 
         async function checkPlayingStatus() {
             try {
+                console.log('🔍 Checking playing status...');
                 const response = await fetch('/api/now-playing');
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('📊 Playing status:', {
+                        playing: data.playing,
+                        song: data.song ? { id: data.song.id, title: data.song.title } : null,
+                        currentTime: data.currentTime,
+                        remainingTime: data.remainingTime
+                    });
 
                     updatePlayerControlsVisibility();
-                    
+
                     if (data.playing && data.song && canViewPlayer()) {
                         document.getElementById('musicPlayer').style.display = 'block';
 
                         if (!currentSong || currentSong.id !== data.song.id) {
+                            console.log('🎵 New song detected, updating player...');
                             currentSong = data.song;
                             const audioElement = document.getElementById('audioElement');
 
@@ -1787,13 +1883,21 @@
                                 songFinished();
                             };
 
-                             if (data.playing && audioElement.paused && isPlayer()) {
-                                 audioElement.play().catch(e => console.log('Autoplay blocked:', e));
-                                 // Resume audio context if needed
-                                 if (audioContext && audioContext.state === 'suspended') {
-                                     audioContext.resume();
-                                 }
-                             }
+                            // Add additional event listeners for debugging
+                            audioElement.onloadeddata = () => console.log('📊 Audio loaded (from checkPlayingStatus)');
+                            audioElement.oncanplay = () => console.log('▶️ Audio can play (from checkPlayingStatus)');
+                            audioElement.onplay = () => console.log('▶️ Audio started playing (from checkPlayingStatus)');
+                            audioElement.onpause = () => console.log('⏸️ Audio paused (from checkPlayingStatus)');
+                            audioElement.onerror = (e) => console.error('❌ Audio error (from checkPlayingStatus):', e);
+
+                              if (data.playing && audioElement.paused && isPlayer()) {
+                                  console.log('▶️ Auto-playing song from checkPlayingStatus...');
+                                  audioElement.play().catch(e => console.log('Autoplay blocked:', e));
+                                  // Resume audio context if needed
+                                  if (audioContext && audioContext.state === 'suspended') {
+                                      audioContext.resume();
+                                  }
+                              }
                         }
 
                         isPlaying = data.playing;
@@ -1801,6 +1905,7 @@
 
                     } else {
                         if (currentSong) {
+                            console.log('⏹️ No song playing, clearing player...');
                             const audioElement = document.getElementById('audioElement');
                             audioElement.pause();
                             audioElement.src = '';
@@ -1809,9 +1914,11 @@
                             document.getElementById('musicPlayer').style.display = 'none';
                         }
                     }
+                } else {
+                    console.error('❌ Failed to check playing status:', response.status);
                 }
             } catch (error) {
-                console.error('Error checking playing status:', error);
+                console.error('❌ Error checking playing status:', error);
             }
         }
 
@@ -2266,7 +2373,24 @@
                 const isVoted = userVotes.includes(parsedSongId);
                 button.className = `vote-btn ${isVoted ? 'voted' : ''}`;
                 button.innerHTML = isVoted ? '🗳️ Voted' : '👍 Vote';
+                console.log(`🔄 Updated button for song ${parsedSongId}:`, { isVoted, buttonText: button.innerHTML });
             });
+        }
+
+        function updateAllVoteButtons() {
+            console.log('🔄 Updating all vote buttons...');
+            const allVoteButtons = document.querySelectorAll('.vote-btn');
+            allVoteButtons.forEach(button => {
+                // Extract song ID from onclick attribute
+                const onclickMatch = button.onclick?.toString().match(/toggleVote\((\d+)\)/);
+                if (onclickMatch) {
+                    const songId = parseInt(onclickMatch[1]);
+                    const isVoted = userVotes.includes(songId);
+                    button.className = `vote-btn ${isVoted ? 'voted' : ''}`;
+                    button.innerHTML = isVoted ? '🗳️ Voted' : '👍 Vote';
+                }
+            });
+            console.log('✅ All vote buttons updated');
         }
 
         function showAlert(message, type) {
