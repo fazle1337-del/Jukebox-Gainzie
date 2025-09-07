@@ -1189,7 +1189,8 @@
                 if (response.ok) {
                     const data = await response.json();
                     const oldVotes = [...userVotes]; // Store old state for debugging
-                    userVotes = data.votedSongs;
+                    // Ensure all IDs are integers and remove duplicates
+                    userVotes = [...new Set(data.votedSongs.map(id => parseInt(id)))];
                     console.log('User votes updated:', { old: oldVotes, new: userVotes });
                 } else {
                     console.error('Failed to load user votes');
@@ -1394,11 +1395,10 @@
                 return;
             }
 
-            console.log('Rendering songs with userVotes:', userVotes);
+            console.log('🎨 Rendering songs with userVotes:', userVotes);
             container.innerHTML = songsToShow.map(song => {
                 const songId = parseInt(song.id);
                 const isVoted = userVotes.includes(songId);
-                console.log(`Song ${songId} (${song.title}): voted = ${isVoted}, userVotes includes: ${userVotes.includes(songId)}`);
                 return `
                 <div class="song-card">
                     <div class="song-title">${escapeHtml(song.title)}</div>
@@ -1442,7 +1442,11 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    userVotes.push(songId);
+                    // Add vote only if not already voted
+                    const parsedSongId = parseInt(songId);
+                    if (!userVotes.includes(parsedSongId)) {
+                        userVotes.push(parsedSongId);
+                    }
                     showAlert('Vote added!', 'success');
                     loadSongs();
                     loadPlaylist();
@@ -1456,7 +1460,8 @@
                     });
 
                     if (removeResponse.ok) {
-                        userVotes = userVotes.filter(id => id !== songId);
+                        const parsedSongId = parseInt(songId);
+                        userVotes = userVotes.filter(id => id !== parsedSongId);
                         showAlert('Vote removed!', 'success');
                         loadSongs();
                         loadPlaylist();
@@ -1626,6 +1631,12 @@
                             }
                         }, 100); // Small delay to ensure audio element is ready
                         
+                        // Always set the onended event handler
+                        audioElement.onended = () => {
+                            console.log('🎵 Audio element ended, calling songFinished');
+                            songFinished();
+                        };
+
                         try {
                             if (isPlayer()) {
                                 await audioElement.play();
@@ -1636,8 +1647,6 @@
                             }
                             document.getElementById('playPauseBtn').innerHTML = '⏸️';
                             isPlaying = true;
-
-                            audioElement.onended = songFinished;
 
                         } catch (playError) {
                             console.error('Autoplay blocked:', playError);
@@ -1675,7 +1684,7 @@
                 
                 if (response.ok) {
                     // Store the skipped song ID for reference
-                    const skippedSongId = currentSong.id;
+                    const skippedSongId = parseInt(currentSong.id);
 
                     const audioElement = document.getElementById('audioElement');
                     audioElement.pause();
@@ -1714,7 +1723,7 @@
             }
 
             // Store the finished song ID for later reference
-            const finishedSongId = currentSong.id;
+            const finishedSongId = parseInt(currentSong.id);
             console.log('🎵 Song finished:', { songId: finishedSongId, currentUserVotes: [...userVotes] });
 
             try {
@@ -1735,13 +1744,10 @@
 
                     // Refresh user votes and song list to reset vote buttons
                     if (canVote()) {
-                        console.log('🔄 Loading updated user votes...');
                         await loadUserVotes();
-                        console.log('✅ User votes loaded, current userVotes:', [...userVotes]);
                     }
 
                     // Re-render songs and playlist with updated vote states
-                    console.log('🔄 Re-rendering songs and playlist...');
                     loadSongs();
                     loadPlaylist();
 
@@ -1776,7 +1782,10 @@
                             document.getElementById('currentTitle').textContent = data.song.title;
                             document.getElementById('currentArtist').textContent = data.song.artist;
 
-                            audioElement.onended = songFinished;
+                            audioElement.onended = () => {
+                                console.log('🎵 Audio element ended (from checkPlayingStatus), calling songFinished');
+                                songFinished();
+                            };
 
                              if (data.playing && audioElement.paused && isPlayer()) {
                                  audioElement.play().catch(e => console.log('Autoplay blocked:', e));
@@ -2251,13 +2260,10 @@
         // Utility functions
         function updateVoteButton(songId) {
             const parsedSongId = parseInt(songId);
-            console.log(`🔄 Updating vote button for song ${parsedSongId}, userVotes:`, userVotes);
             // Find and update the vote button for a specific song
             const voteButtons = document.querySelectorAll(`button[onclick*="toggleVote(${parsedSongId})"]`);
-            console.log(`Found ${voteButtons.length} buttons for song ${parsedSongId}`);
             voteButtons.forEach(button => {
                 const isVoted = userVotes.includes(parsedSongId);
-                console.log(`Button for song ${parsedSongId}: isVoted = ${isVoted}`);
                 button.className = `vote-btn ${isVoted ? 'voted' : ''}`;
                 button.innerHTML = isVoted ? '🗳️ Voted' : '👍 Vote';
             });
