@@ -1263,12 +1263,18 @@
             if (isPlayer() && document.getElementById('playlistTab').classList.contains('active')) {
                 container.style.display = 'block';
                 if (!audioMotion) {
+                    console.log('Initializing AudioMotion for player');
                     initializeAudioMotion();
                 }
             } else {
                 container.style.display = 'none';
                 if (audioMotion) {
-                    audioMotion.disconnectInput();
+                    console.log('Disconnecting AudioMotion');
+                    try {
+                        audioMotion.disconnectInput();
+                    } catch (e) {
+                        console.error('Error disconnecting AudioMotion:', e);
+                    }
                     audioMotion = null;
                 }
             }
@@ -1278,15 +1284,22 @@
             const canvas = document.getElementById('audioMotionCanvas');
             const audioElement = document.getElementById('audioElement');
 
-            if (!canvas || !audioElement) return;
+            if (!canvas || !audioElement) {
+                console.error('Canvas or audio element not found');
+                return;
+            }
+
+            // Ensure canvas has proper dimensions
+            canvas.width = canvas.clientWidth;
+            canvas.height = 200;
 
             try {
+                // Create AudioMotion with configuration
                 audioMotion = new AudioMotionAnalyzer(canvas, {
-                    source: audioElement,
                     mode: 3, // bars
-                    fftSize: 8192,
+                    fftSize: 4096,
                     minFreq: 20,
-                    maxFreq: 22000,
+                    maxFreq: 16000,
                     smoothing: 0.8,
                     gradient: 'rainbow',
                     showBgColor: true,
@@ -1294,13 +1307,30 @@
                     overlay: true,
                     showPeaks: true,
                     showScaleX: false,
-                    showScaleY: false,
-                    height: 200
+                    showScaleY: false
                 });
 
                 console.log('AudioMotion initialized successfully');
+
+                // Connect to audio element if it's already playing
+                if (!audioElement.paused && audioElement.currentTime > 0) {
+                    console.log('Connecting AudioMotion to already playing audio');
+                    try {
+                        audioMotion.connectInput(audioElement);
+                    } catch (e) {
+                        console.error('Error connecting to playing audio:', e);
+                    }
+                }
+
             } catch (error) {
                 console.error('Failed to initialize AudioMotion:', error);
+                // Try fallback initialization
+                try {
+                    audioMotion = new AudioMotionAnalyzer(canvas);
+                    console.log('AudioMotion initialized with minimal config');
+                } catch (fallbackError) {
+                    console.error('Fallback initialization also failed:', fallbackError);
+                }
             }
         }
 
@@ -1505,9 +1535,14 @@
                      if (data.playing) {
                           if (isPlayer()) {
                               audioElement.play();
-                              // Connect AudioMotion if it's initialized
-                              if (audioMotion) {
-                                  audioMotion.connectInput(audioElement);
+                              // Connect AudioMotion if it's initialized and visible
+                              if (audioMotion && document.getElementById('audioMotionContainer').style.display !== 'none') {
+                                  console.log('Connecting AudioMotion to audio element (play/pause)');
+                                  try {
+                                      audioMotion.connectInput(audioElement);
+                                  } catch (e) {
+                                      console.error('Error connecting AudioMotion:', e);
+                                  }
                               }
                           }
                           playPauseBtn.innerHTML = '⏸️';
@@ -1545,17 +1580,34 @@
                         currentSong = data.song;
                         const audioElement = document.getElementById('audioElement');
                         audioElement.src = data.streamUrl;
-                        
+
                         document.getElementById('currentTitle').textContent = data.song.title;
                         document.getElementById('currentArtist').textContent = data.song.artist;
                         document.getElementById('musicPlayer').style.display = 'block';
+
+                        // Reconnect AudioMotion when source changes
+                        if (audioMotion && document.getElementById('audioMotionContainer').style.display !== 'none') {
+                            console.log('Reconnecting AudioMotion after source change');
+                            setTimeout(() => {
+                                try {
+                                    audioMotion.connectInput(audioElement);
+                                } catch (e) {
+                                    console.error('Error reconnecting AudioMotion:', e);
+                                }
+                            }, 100); // Small delay to ensure audio element is ready
+                        }
                         
                         try {
                             if (isPlayer()) {
                                 await audioElement.play();
-                                // Connect AudioMotion if it's initialized
-                                if (audioMotion) {
-                                    audioMotion.connectInput(audioElement);
+                                // Connect AudioMotion if it's initialized and visible
+                                if (audioMotion && document.getElementById('audioMotionContainer').style.display !== 'none') {
+                                    console.log('Connecting AudioMotion to audio element');
+                                    try {
+                                        audioMotion.connectInput(audioElement);
+                                    } catch (e) {
+                                        console.error('Error connecting AudioMotion:', e);
+                                    }
                                 }
                             }
                             document.getElementById('playPauseBtn').innerHTML = '⏸️';
@@ -1679,9 +1731,14 @@
 
                              if (data.playing && audioElement.paused && isPlayer()) {
                                  audioElement.play().catch(e => console.log('Autoplay blocked:', e));
-                                 // Connect AudioMotion if it's initialized
-                                 if (audioMotion) {
-                                     audioMotion.connectInput(audioElement);
+                                 // Connect AudioMotion if it's initialized and visible
+                                 if (audioMotion && document.getElementById('audioMotionContainer').style.display !== 'none') {
+                                     console.log('Connecting AudioMotion to audio element (status check)');
+                                     try {
+                                         audioMotion.connectInput(audioElement);
+                                     } catch (e) {
+                                         console.error('Error connecting AudioMotion:', e);
+                                     }
                                  }
                              }
                         }
@@ -1999,6 +2056,18 @@
 
                     document.getElementById('currentTitle').textContent = data.song.title;
                     document.getElementById('currentArtist').textContent = data.song.artist;
+
+                    // Reconnect AudioMotion when source changes
+                    if (audioMotion && document.getElementById('audioMotionContainer').style.display !== 'none') {
+                        console.log('Reconnecting AudioMotion after force play');
+                        setTimeout(() => {
+                            try {
+                                audioMotion.connectInput(audioElement);
+                            } catch (e) {
+                                console.error('Error reconnecting AudioMotion:', e);
+                            }
+                        }, 100);
+                    }
 
                     // Show player for admin when force playing
                     document.getElementById('musicPlayer').style.display = 'block';
