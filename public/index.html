@@ -1178,17 +1178,19 @@
                 userVotes = [];
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/my-votes', {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
+                    const oldVotes = [...userVotes]; // Store old state for debugging
                     userVotes = data.votedSongs;
+                    console.log('User votes updated:', { old: oldVotes, new: userVotes });
                 } else {
                     console.error('Failed to load user votes');
                     userVotes = [];
@@ -1392,7 +1394,12 @@
                 return;
             }
 
-            container.innerHTML = songsToShow.map(song => `
+            console.log('Rendering songs with userVotes:', userVotes);
+            container.innerHTML = songsToShow.map(song => {
+                const songId = parseInt(song.id);
+                const isVoted = userVotes.includes(songId);
+                console.log(`Song ${songId} (${song.title}): voted = ${isVoted}, userVotes includes: ${userVotes.includes(songId)}`);
+                return `
                 <div class="song-card">
                     <div class="song-title">${escapeHtml(song.title)}</div>
                     <div class="song-artist">${escapeHtml(song.artist)}</div>
@@ -1403,8 +1410,8 @@
                     <div class="vote-section">
                         <span class="vote-count">${song.votes} votes</span>
                         ${canVote() ? `
-                            <button class="vote-btn ${userVotes.includes(song.id) ? 'voted' : ''}" onclick="toggleVote(${song.id})">
-                                ${userVotes.includes(song.id) ? '🗳️ Voted' : '👍 Vote'}
+                            <button class="vote-btn ${isVoted ? 'voted' : ''}" onclick="toggleVote(${songId})">
+                                ${isVoted ? '🗳️ Voted' : '👍 Vote'}
                             </button>
                         ` : `
                             <button class="vote-btn disabled-feature" disabled>
@@ -1413,7 +1420,7 @@
                         `}
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function toggleVote(songId) {
@@ -1436,7 +1443,6 @@
                 
                 if (response.ok) {
                     userVotes.push(songId);
-                    updateVoteButton(songId); // Immediately update the button
                     showAlert('Vote added!', 'success');
                     loadSongs();
                     loadPlaylist();
@@ -1451,7 +1457,6 @@
 
                     if (removeResponse.ok) {
                         userVotes = userVotes.filter(id => id !== songId);
-                        updateVoteButton(songId); // Immediately update the button
                         showAlert('Vote removed!', 'success');
                         loadSongs();
                         loadPlaylist();
@@ -1669,13 +1674,8 @@
                 });
                 
                 if (response.ok) {
-                    // Immediately remove the skipped song from local userVotes array
+                    // Store the skipped song ID for reference
                     const skippedSongId = currentSong.id;
-                    if (userVotes.includes(skippedSongId)) {
-                        userVotes = userVotes.filter(id => id !== skippedSongId);
-                        updateVoteButton(skippedSongId); // Immediately update the button
-                        console.log(`Removed song ${skippedSongId} from userVotes locally (skipped)`);
-                    }
 
                     const audioElement = document.getElementById('audioElement');
                     audioElement.pause();
@@ -1702,22 +1702,20 @@
         }
 
         async function songFinished() {
+            console.log('🎵 songFinished called');
             if (!authToken || !canControlPlayer()) {
+                console.log('❌ Not authorized or not player');
                 return;
             }
 
             if (!currentSong) {
+                console.log('❌ No current song');
                 return;
             }
 
-            // Immediately remove the finished song from local userVotes array
-            // This ensures the vote button updates immediately
+            // Store the finished song ID for later reference
             const finishedSongId = currentSong.id;
-            if (userVotes.includes(finishedSongId)) {
-                userVotes = userVotes.filter(id => id !== finishedSongId);
-                updateVoteButton(finishedSongId); // Immediately update the button
-                console.log(`Removed song ${finishedSongId} from userVotes locally`);
-            }
+            console.log('🎵 Song finished:', { songId: finishedSongId, currentUserVotes: [...userVotes] });
 
             try {
                 const response = await fetch('/api/song-finished', {
@@ -1729,19 +1727,23 @@
                 });
 
                 if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('✅ Server confirmed song finished:', responseData);
                     currentSong = null;
                     isPlaying = false;
                     document.getElementById('musicPlayer').style.display = 'none';
 
                     // Refresh user votes and song list to reset vote buttons
                     if (canVote()) {
+                        console.log('🔄 Loading updated user votes...');
                         await loadUserVotes();
+                        console.log('✅ User votes loaded, current userVotes:', [...userVotes]);
                     }
-                    // Small delay to ensure userVotes is updated before re-rendering
-                    setTimeout(() => {
-                        loadSongs();
-                        loadPlaylist();
-                    }, 100);
+
+                    // Re-render songs and playlist with updated vote states
+                    console.log('🔄 Re-rendering songs and playlist...');
+                    loadSongs();
+                    loadPlaylist();
 
                     setTimeout(() => {
                         playNext();
@@ -2248,10 +2250,14 @@
 
         // Utility functions
         function updateVoteButton(songId) {
+            const parsedSongId = parseInt(songId);
+            console.log(`🔄 Updating vote button for song ${parsedSongId}, userVotes:`, userVotes);
             // Find and update the vote button for a specific song
-            const voteButtons = document.querySelectorAll(`button[onclick*="toggleVote(${songId})"]`);
+            const voteButtons = document.querySelectorAll(`button[onclick*="toggleVote(${parsedSongId})"]`);
+            console.log(`Found ${voteButtons.length} buttons for song ${parsedSongId}`);
             voteButtons.forEach(button => {
-                const isVoted = userVotes.includes(songId);
+                const isVoted = userVotes.includes(parsedSongId);
+                console.log(`Button for song ${parsedSongId}: isVoted = ${isVoted}`);
                 button.className = `vote-btn ${isVoted ? 'voted' : ''}`;
                 button.innerHTML = isVoted ? '🗳️ Voted' : '👍 Vote';
             });

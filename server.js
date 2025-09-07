@@ -731,15 +731,16 @@ app.get('/api/my-votes', requireUserOrAdmin, (req, res) => {
     SELECT song_id FROM votes WHERE user_id = ?
   `;
   
-  db.all(query, [userId], (err, rows) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    const votedSongIds = rows.map(row => row.song_id);
-    res.json({ votedSongs: votedSongIds });
-  });
+   db.all(query, [userId], (err, rows) => {
+     if (err) {
+       console.error('Database error:', err);
+       return res.status(500).json({ error: 'Database error' });
+     }
+
+     const votedSongIds = rows.map(row => row.song_id);
+     console.log(`📊 User ${userId} votes:`, votedSongIds);
+     res.json({ votedSongs: votedSongIds });
+   });
 });
 
 // Upload music file
@@ -979,24 +980,27 @@ app.post('/api/song-finished', requirePlayerOrAdmin, (req, res) => {
     playTimeout = null;
   }
 
-  // Remove all votes for finished song
-  db.run('DELETE FROM votes WHERE song_id = ?', [songId], (err) => {
-    if (err) {
-      console.error('Database error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-  
-    // Clear current playing
-    currentlyPlaying = {
-      songId: null,
-      startTime: null,
-      duration: null,
-      isPlaying: false,
-      pausedAt: null
-    };
- 
-    res.json({ message: 'Song finished, votes removed' });
-  });
+   // Remove all votes for finished song
+   console.log(`🗑️ Clearing all votes for song ${songId}`);
+   db.run('DELETE FROM votes WHERE song_id = ?', [songId], function(err) {
+     if (err) {
+       console.error('Database error:', err);
+       return res.status(500).json({ error: 'Database error' });
+     }
+
+     console.log(`✅ Cleared ${this.changes} votes for song ${songId}`);
+
+     // Clear current playing
+     currentlyPlaying = {
+       songId: null,
+       startTime: null,
+       duration: null,
+       isPlaying: false,
+       pausedAt: null
+     };
+
+     res.json({ message: `Song finished, ${this.changes} votes removed` });
+   });
 });
 
 // ADMIN ENDPOINTS
