@@ -1309,7 +1309,7 @@
 
                 // Create analyser
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
+                analyser.fftSize = 240;
                 analyser.smoothingTimeConstant = 0.8;
 
                 // Create data array
@@ -1356,9 +1356,9 @@
             for (let i = 0; i < dataArray.length; i++) {
                 barHeight = (dataArray[i] / 255) * height;
 
-                // Create gradient colors
-                const hue = (i / dataArray.length) * 360;
-                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+                // Create orange gradient colors
+                const hue = 15 + (i / dataArray.length) * 30; // Orange range: 15-45 degrees
+                ctx.fillStyle = `hsl(${hue}, 85%, 55%)`;
 
                 ctx.fillRect(x, height - barHeight, barWidth, barHeight);
 
