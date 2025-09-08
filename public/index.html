@@ -989,6 +989,10 @@
                 checkPlayingStatus();
             }
 
+            // Setup new event handlers for bug fixes
+            setupAudioEventHandlers();
+            setupVoteHandlers();
+
             // Start periodic updates
             setInterval(checkPlayingStatus, 2000);
             setInterval(loadPlaylist, 10000);
@@ -2497,6 +2501,255 @@
             }
         `;
         document.head.appendChild(adminTabContentStyle);
+
+        // ==============================================
+        // FRONTEND JAVASCRIPT FIXES (add to index.html)
+        // ==============================================
+
+        // 1. Enhanced audio event handler for song completion
+        function setupAudioEventHandlers() {
+            const audioElement = document.getElementById('audioElement'); // Adjusted to match existing ID
+
+            if (!audioElement) {
+                console.error('Audio element not found!');
+                return;
+            }
+
+            // Handle song ending
+            audioElement.addEventListener('ended', async function() {
+                console.log('🎵 Song ended - triggering completion sequence');
+
+                try {
+                    // Step 1: Call song-finished endpoint to clear votes and reset state
+                    const finishResponse = await fetch('/api/song-finished', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (finishResponse.ok) {
+                        console.log('✅ Song completion processed');
+
+                        // Step 2: Refresh vote buttons immediately
+                        await refreshVoteStates();
+
+                        // Step 3: Wait a moment, then try to play next song
+                        setTimeout(async () => {
+                            await playNextSong();
+                        }, 1000);
+
+                    } else {
+                        console.error('❌ Failed to process song completion');
+                    }
+
+                } catch (error) {
+                    console.error('Error handling song end:', error);
+                }
+            });
+
+            // Handle audio loading errors
+            audioElement.addEventListener('error', function(e) {
+                console.error('Audio error:', e);
+                // Try to play next song on error
+                setTimeout(() => playNextSong(), 2000);
+            });
+        }
+
+        // 2. Function to refresh vote button states
+        async function refreshVoteStates() {
+            try {
+                console.log('🔄 Refreshing vote states...');
+
+                // Get user's current votes
+                const response = await fetch('/api/my-votes', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const votedSongs = data.votedSongs || [];
+
+                    // Reset all vote buttons first
+                    const voteButtons = document.querySelectorAll('.vote-btn');
+                    voteButtons.forEach(button => {
+                        // Extract song ID from onclick attribute
+                        const onclickMatch = button.onclick?.toString().match(/toggleVote\((\d+)\)/);
+                        if (onclickMatch) {
+                            const songId = parseInt(onclickMatch[1]);
+
+                            if (votedSongs.includes(songId)) {
+                                // User has voted for this song
+                                button.textContent = 'Voted';
+                                button.classList.remove('btn-primary');
+                                button.classList.add('btn-success');
+                            } else {
+                                // User hasn't voted for this song
+                                button.textContent = 'Vote';
+                                button.classList.remove('btn-success', 'btn-secondary');
+                                button.classList.add('btn-primary');
+                            }
+                        }
+                    });
+
+                    console.log('✅ Vote states refreshed');
+                }
+
+            } catch (error) {
+                console.error('Error refreshing vote states:', error);
+            }
+        }
+
+        // 3. Function to play next song automatically
+        async function playNextSong() {
+            try {
+                console.log('⏭️ Attempting to play next song...');
+
+                const response = await fetch('/api/play-next', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    if (data.song && data.streamUrl) {
+                        console.log(`🎵 Playing next: ${data.song.title} by ${data.song.artist}`);
+
+                        // Update audio source and play
+                        const audioElement = document.getElementById('audioElement');
+                        if (audioElement) {
+                            audioElement.src = data.streamUrl;
+                            audioElement.load();
+
+                            try {
+                                await audioElement.play();
+                                console.log('✅ Next song started playing');
+                            } catch (playError) {
+                                console.error('Error playing next song:', playError);
+                            }
+                        }
+
+                        // Refresh the UI displays
+                        refreshPlaylist();
+                        refreshNowPlaying();
+
+                    } else {
+                        console.log('ℹ️ No more songs in playlist');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    console.log('ℹ️ No next song available:', errorData.error);
+                }
+
+            } catch (error) {
+                console.error('Error playing next song:', error);
+            }
+        }
+
+        // 4. Enhanced vote button click handler (modified for existing onclick)
+        function setupVoteHandlers() {
+            // The existing onclick handlers are already set up in displaySongs
+            // This function can be used for additional event delegation if needed
+            console.log('Vote handlers initialized');
+        }
+
+        // 5. Utility function to show notifications
+        function showNotification(message, type = 'info') {
+            // Create or update notification element
+            let notification = document.getElementById('notification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'notification';
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    color: white;
+                    font-weight: bold;
+                    z-index: 1000;
+                    max-width: 300px;
+                `;
+                document.body.appendChild(notification);
+            }
+
+            // Set color based on type
+            const colors = {
+                'success': '#28a745',
+                'error': '#dc3545',
+                'warning': '#ffc107',
+                'info': '#17a2b8'
+            };
+
+            notification.style.backgroundColor = colors[type] || colors.info;
+            notification.textContent = message;
+            notification.style.display = 'block';
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // 6. Refresh functions
+        async function refreshPlaylist() {
+            try {
+                const response = await fetch('/api/playlist');
+                if (response.ok) {
+                    const playlist = await response.json();
+                    // Update playlist UI - adjust this based on your HTML structure
+                    console.log('Playlist refreshed:', playlist.length, 'songs');
+                    displayPlaylist(playlist); // Use existing function
+                }
+            } catch (error) {
+                console.error('Error refreshing playlist:', error);
+            }
+        }
+
+        async function refreshSongs() {
+            try {
+                const response = await fetch('/api/songs');
+                if (response.ok) {
+                    const songs = await response.json();
+                    // Update songs UI - adjust this based on your HTML structure
+                    console.log('Songs refreshed:', songs.length, 'total songs');
+                    displaySongs(songs); // Use existing function
+                }
+            } catch (error) {
+                console.error('Error refreshing songs:', error);
+            }
+        }
+
+        async function refreshNowPlaying() {
+            try {
+                const response = await fetch('/api/now-playing');
+                if (response.ok) {
+                    const nowPlaying = await response.json();
+                    // Update now playing UI - adjust this based on your HTML structure
+                    console.log('Now playing refreshed:', nowPlaying.playing ? nowPlaying.song.title : 'Nothing');
+                    // Update current title and artist if playing
+                    if (nowPlaying.playing && nowPlaying.song) {
+                        document.getElementById('currentTitle').textContent = nowPlaying.song.title;
+                        document.getElementById('currentArtist').textContent = nowPlaying.song.artist;
+                        document.getElementById('musicPlayer').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error refreshing now playing:', error);
+            }
+        }
+
+        // 7. Initialize everything when page loads (update existing DOMContentLoaded)
+        // Note: The existing DOMContentLoaded already has initialization
+        // Add these calls to the existing initialization
     </script>
 </body>
 </html>
